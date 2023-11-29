@@ -30,7 +30,11 @@ pub trait NorthboundAdapterInterface {
     /// This has to be non-blocking!
     fn run(&self);
 
-    /// CNC Configuration
+    /// # CNC Configuration
+    /// Minimum requirement:
+    /// ```
+    /// self.cnc = Some(cnc);
+    /// ```
     fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 
