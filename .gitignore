@@ -1,3 +1,6 @@
 /target
 /Cargo.lock
 /.vscode
+
+/domain_storage.json
+/config_storage.json

@@ -2,13 +2,18 @@
 pub mod tsn_types {
     use serde::{Deserialize, Serialize};
 
-    // pattern
-    //     "[0-9A-F]{2}"+
-    //     "(-[0-9A-F]{2}){5}"+
-    //     ":"+
-    //     "[0-9A-F]{2}"+
-    //     "-"+
-    //     "[0-9A-F]{2}"
+    /// StreamId
+    /// # Pattern as of the YANG-Models
+    ///     "[0-9A-F]{2}"+
+    ///     "(-[0-9A-F]{2}){5}"+
+    ///     ":"+
+    ///     "[0-9A-F]{2}"+
+    ///     "-"+
+    ///     "[0-9A-F]{2}"
+    /// # Example
+    /// stream_id: 00-00-00-00-00-00:7A-6E
+    ///
+    /// stream_id: 00-00-00-00-00-00:11-22
     pub type StreamIdTypeUpper = String;
 
     // TODO go through all types again, if something is missing
@@ -83,7 +88,7 @@ pub mod tsn_types {
         pub interface_name: String,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub struct GroupInterfaceConfiguration {
         // interface_list: Vec,
         // TODO is needed?
@@ -156,14 +161,14 @@ pub mod tsn_types {
         pub interface_capabilities: GroupInterfaceCapabilities,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub enum TalkerStatus {
         None = 0,
         Ready = 1,
         Failed = 2,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub enum ListenerStatus {
         None = 0,
         Ready = 1,
@@ -171,20 +176,20 @@ pub mod tsn_types {
         Failed = 3,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub struct StatusInfoContainer {
         pub talker_status: TalkerStatus,
         pub listener_status: ListenerStatus,
         pub failure_code: i32,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub struct GroupStatusStream {
         pub status_info: StatusInfoContainer,
         pub failed_interfaces: Vec<GroupInterfaceId>,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub struct GroupStatusTalkerListener {
         pub accumulated_latency: u32,
         pub interface_configuration: GroupInterfaceConfiguration,
@@ -193,35 +198,30 @@ pub mod tsn_types {
 
 // ieee802-dot1q-tsn-config-uni.yang -- as rust types
 pub mod uni_types {
+    use super::tsn_types;
     use serde::{Deserialize, Serialize};
 
-    use super::tsn_types;
-
-    pub struct TsnUni {
-        pub domain: Vec<Domain>,
-    }
-
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub struct Domain {
         pub domain_id: String,
         pub cnc_enabled: bool,
         pub cuc: Vec<Cuc>,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub struct Cuc {
         pub cuc_id: String,
         pub stream: Vec<Stream>,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub enum StreamStatus {
         Planned = 0,
         Configured = 1,
         Modified = 2,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub struct Stream {
         pub stream_id: String,
         pub stream_status: StreamStatus,
@@ -230,14 +230,14 @@ pub mod uni_types {
         pub group_status_stream: tsn_types::GroupStatusStream,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub struct Talker {
         // evtl nicht als struct und fields...
         pub group_talker: tsn_types::GroupTalker,
         pub group_status_talker_listener: tsn_types::GroupStatusTalkerListener,
     }
 
-    #[derive(Serialize, Deserialize)]
+    #[derive(Serialize, Deserialize, Clone)]
     pub struct Listener {
         // evtl nicht als struct und fields...
         pub index: u32,
@@ -310,8 +310,10 @@ pub mod uni_types {
 
 // ieee802-dot1q-sched.yang -- as rust types
 pub mod shed_types {
+    use serde::{Deserialize, Serialize};
 
-    #[derive(Debug)]
+    #[derive(Serialize, Deserialize, Clone, Debug)]
+
     pub struct GateControlEntry {
         operation_name: Box<GateControlEntry>,
         time_interval_value: u32,
@@ -325,7 +327,7 @@ pub mod shed_types {
         SetAndReleaseMAC,
     }
 
-    #[derive(Debug)]
+    #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct QueueMaxSduEntry {
         traffic_class: u8, // TODO u8 type? supported traffic classes up to 8
         queue_max_sdu: u32,
@@ -351,7 +353,7 @@ pub mod shed_types {
         oper_cycle_time_extension: u32,
         admin_base_time: PtpTimeScale,
         oper_base_time: PtpTimeScale,
-        config_chage: bool,
+        config_change: bool,
         config_time_change_time: PtpTimeScale,
         tick_granularity: u32,
         current_time: PtpTimeScale,
@@ -360,5 +362,55 @@ pub mod shed_types {
         supported_list_max: u32,
         supported_cycle_max: RationalGrouping,
         supported_interval_max: u32,
+    }
+
+    #[derive(Serialize, Deserialize, Clone, Debug)]
+    pub struct ConfigurableGateParameterTableEntry {
+        // YANG -> The value must be retained across reinitializations of the management system.
+        queue_max_sdu_table: Vec<QueueMaxSduEntry>,
+
+        gate_enable: bool,
+        admin_gate_states: u8, // all 8 gates coded into bit representation
+        admin_control_list: Vec<GateControlEntry>,
+        admin_cycle_time: RationalGrouping,
+        admin_cycle_time_extension: u32,
+        admin_base_time: PtpTimeScale,
+
+        // must not be retained... This applies the config?
+        config_change: bool,
+
+        // config false aber The value must be retained across reinitializations of the management system.
+        tick_granularity: u32,
+
+        // following -> Maybe
+        supported_list_max: u32,
+        supported_cycle_max: RationalGrouping,
+        supported_interval_max: u32,
+    }
+}
+
+pub mod notification_types {
+    use super::tsn_types::StreamIdTypeUpper;
+
+    pub type NotificationContent = Vec<Domain>;
+
+    #[derive(Debug)]
+    pub struct Domain {
+        domain_id: String,
+        cucs: Vec<Cuc>,
+    }
+
+    #[derive(Debug)]
+    pub struct Cuc {
+        cuc_id: String,
+        streams: Vec<Stream>,
+    }
+
+    #[derive(Debug)]
+    pub struct Stream {
+        stream_id: StreamIdTypeUpper,
+        /// # Values
+        /// successful (0) or unsuccessful (1)
+        failure_code: u8,
     }
 }

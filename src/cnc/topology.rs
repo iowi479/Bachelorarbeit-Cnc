@@ -1,20 +1,33 @@
 use super::Cnc;
 use std::{
-    cell::RefCell,
     net::{IpAddr, Ipv4Addr},
-    sync::Weak,
+    sync::{RwLock, Weak},
+    thread,
+    time::Duration,
 };
 
 pub trait TopologyControllerInterface {
-    fn notify_topology_changed();
+    fn notify_topology_changed(&self);
 }
 
 pub trait TopologyAdapterInterface {
     fn get_topology(&self) -> &Topology;
     fn get_node_information(&self, id: u32) -> Option<&NodeInformation>;
 
-    // CNC Configuration
-    fn set_cnc_ref(&mut self, cnc: Weak<RefCell<Cnc>>);
+    /// running this component continously
+    ///
+    /// possibly in a new Thread
+    ///
+    /// # Important
+    /// This has to be non-blocking!
+    fn run(&self);
+
+    /// # CNC Configuration
+    /// Minimum requirement:
+    /// ```
+    /// self.cnc = Some(cnc);
+    /// ```
+    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 
 pub enum NodeType {
@@ -44,7 +57,7 @@ pub struct Topology {
 
 pub struct MockTopology {
     topology: Topology,
-    cnc: Option<Weak<RefCell<Cnc>>>,
+    cnc: Option<Weak<RwLock<Cnc>>>,
 }
 
 impl MockTopology {
@@ -146,7 +159,16 @@ impl TopologyAdapterInterface for MockTopology {
         &self.topology
     }
 
-    fn set_cnc_ref(&mut self, cnc: Weak<RefCell<Cnc>>) {
+    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>) {
         self.cnc = Some(cnc);
+    }
+
+    fn run(&self) {
+        let cnc = self.cnc.as_ref().unwrap().upgrade().unwrap().clone();
+        thread::spawn(move || loop {
+            thread::sleep(Duration::from_secs(10));
+            println!("[Topology] Topology Changed");
+            cnc.read().unwrap().notify_topology_changed();
+        });
     }
 }
