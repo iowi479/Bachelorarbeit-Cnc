@@ -2,17 +2,27 @@ use super::Cnc;
 use std::{
     net::{IpAddr, Ipv4Addr},
     sync::{RwLock, Weak},
+    thread,
+    time::Duration,
 };
 
 pub trait TopologyControllerInterface {
-    fn notify_topology_changed();
+    fn notify_topology_changed(&self);
 }
 
 pub trait TopologyAdapterInterface {
     fn get_topology(&self) -> &Topology;
     fn get_node_information(&self, id: u32) -> Option<&NodeInformation>;
 
-    // CNC Configuration
+    /// running this component continously
+    ///
+    /// possibly in a new Thread
+    ///
+    /// # Important
+    /// This has to be non-blocking!
+    fn run(&self);
+
+    /// CNC Configuration
     fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 
@@ -147,5 +157,14 @@ impl TopologyAdapterInterface for MockTopology {
 
     fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>) {
         self.cnc = Some(cnc);
+    }
+
+    fn run(&self) {
+        let cnc = self.cnc.as_ref().unwrap().upgrade().unwrap();
+        thread::spawn(move || loop {
+            thread::sleep(Duration::from_secs(10));
+            println!("[Topology] Topology Changed");
+            cnc.read().unwrap().notify_topology_changed();
+        });
     }
 }
