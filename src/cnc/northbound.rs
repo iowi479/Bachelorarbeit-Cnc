@@ -1,17 +1,15 @@
-use std::cell::RefCell;
-use std::sync::Weak;
+use std::sync::{RwLock, Weak};
 
 use super::tsntypes::uni_types::{
     compute_all_streams, compute_planned_and_modified_streams, compute_streams, remove_streams,
-    request_domain_id, request_free_stream_id, Stream, StreamStatus, Talker,
+    request_domain_id, request_free_stream_id,
 };
 use super::Cnc;
 
 use super::tsntypes::tsn_types::{
     DataFrameSpecificationElement, DataFrameSpecificationElementType, EndStationInterface,
-    GroupIeee802VlanTag, GroupInterfaceCapabilities, GroupInterfaceId, GroupListener,
-    GroupStatusTalkerListener, GroupTalker, GroupUserToNetworkRequirements, StreamRankContainer,
-    TrafficSpecificationContainer,
+    GroupIeee802VlanTag, GroupInterfaceCapabilities, GroupInterfaceId, GroupListener, GroupTalker,
+    GroupUserToNetworkRequirements, StreamRankContainer, TrafficSpecificationContainer,
 };
 
 // Communication Component <--> CNC
@@ -22,7 +20,7 @@ pub trait NorthboundAdapterInterface {
     fn remove_streams_completed(&self);
 
     // CNC Configuration
-    fn set_cnc_ref(&mut self, cnc: Weak<RefCell<Cnc>>);
+    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 
 // Communication Component <--> CNC
@@ -54,7 +52,7 @@ pub trait NorthboundControllerInterface {
 }
 
 pub struct MockUniAdapter {
-    cnc: Option<Weak<RefCell<Cnc>>>, // ref to cnc
+    cnc: Option<Weak<RwLock<Cnc>>>, // ref to cnc
 }
 
 // Implementation specific stuff
@@ -68,10 +66,11 @@ impl MockUniAdapter {
         let x = Self::get_example_add_stream();
         let r = self.cnc.as_ref().unwrap().upgrade().unwrap();
 
-        r.borrow().stream_request(x);
+        r.read().unwrap().stream_request(x);
         println!(
             "free stream id: {}",
-            r.borrow()
+            r.read()
+                .unwrap()
                 .request_free_stream_id(request_free_stream_id::Input {
                     domain_id: String::from("test-domain-id"),
                     cuc_id: String::from("test-cuc-id")
@@ -178,7 +177,7 @@ impl NorthboundAdapterInterface for MockUniAdapter {
         println!("[Northbound]-[MockUniAdapter] Notification: remove_streams_completed");
     }
 
-    fn set_cnc_ref(&mut self, cnc: Weak<RefCell<Cnc>>) {
+    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>) {
         self.cnc = Some(cnc);
     }
 }

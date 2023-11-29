@@ -1,4 +1,4 @@
-use std::{cell::RefCell, sync::Weak};
+use std::sync::{RwLock, Weak};
 
 use super::{tsntypes::shed_types::SchedParameters, Cnc};
 
@@ -8,12 +8,12 @@ pub trait SouthboundAdapterInterface {
     fn retrieve_station_capibilities(&self);
 
     // CNC Configuration
-    fn set_cnc_ref(&mut self, cnc: Weak<RefCell<Cnc>>);
+    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 
 pub struct NetconfAdapter {
     id: u32,
-    cnc: Option<Weak<RefCell<Cnc>>>,
+    cnc: Option<Weak<RwLock<Cnc>>>,
 }
 
 impl NetconfAdapter {
@@ -45,7 +45,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
         // may not be possible atm using netconf
     }
 
-    fn set_cnc_ref(&mut self, cnc: Weak<RefCell<Cnc>>) {
+    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>) {
         self.cnc = Some(cnc);
     }
 }

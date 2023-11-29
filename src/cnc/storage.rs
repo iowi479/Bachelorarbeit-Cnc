@@ -3,7 +3,7 @@ use super::Cnc;
 use rand::Rng;
 use std::fs::File;
 use std::io::{Error, Read, Write};
-use std::{cell::RefCell, sync::Weak};
+use std::sync::{RwLock, Weak};
 
 // FileStorage specific constants
 // TODO should probably be removed
@@ -29,7 +29,7 @@ pub trait StorageAdapterInterface {
     fn get_free_stream_id(&self, domain_id: String, cuc_id: String) -> Option<String>;
 
     // CNC Configuration
-    fn set_cnc_ref(&mut self, cnc: Weak<RefCell<Cnc>>);
+    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 
 pub struct FileStorage {
@@ -37,7 +37,7 @@ pub struct FileStorage {
 
     // TODO which types for tas-configuration?
     configs: Vec<u32>,
-    cnc: Option<Weak<RefCell<Cnc>>>, // ref to cnc
+    cnc: Option<Weak<RwLock<Cnc>>>, // ref to cnc
 }
 
 impl FileStorage {
@@ -120,7 +120,8 @@ impl StorageAdapterInterface for FileStorage {
                     .unwrap()
                     .upgrade()
                     .unwrap()
-                    .borrow()
+                    .read()
+                    .unwrap()
                     .get_cnc_domain_id(),
                 cnc_enabled: true,
                 cuc: Vec::new(),
@@ -235,7 +236,7 @@ impl StorageAdapterInterface for FileStorage {
         // Some(Self::random_stream_id())
     }
 
-    fn set_cnc_ref(&mut self, cnc: Weak<RefCell<Cnc>>) {
+    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>) {
         self.cnc = Some(cnc);
     }
 }

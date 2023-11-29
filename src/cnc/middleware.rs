@@ -1,4 +1,4 @@
-use std::{cell::RefCell, sync::Weak};
+use std::sync::{RwLock, Weak};
 
 use super::Cnc;
 
@@ -12,15 +12,15 @@ pub struct Flow {
 }
 
 pub trait SchedulerAdapterInterface {
-    fn compute_schedule(flow: Flow) -> Schedule;
+    fn compute_schedule(&self, flow: Flow) -> Schedule;
 
     // CNC Configuration
-    fn set_cnc_ref(&mut self, cnc: Weak<RefCell<Cnc>>);
+    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 
 pub struct IPVSDsyncTSNScheduling {
     // TODO impl sched-algo
-    cnc: Option<Weak<RefCell<Cnc>>>,
+    cnc: Option<Weak<RwLock<Cnc>>>,
 }
 
 impl IPVSDsyncTSNScheduling {
@@ -30,14 +30,14 @@ impl IPVSDsyncTSNScheduling {
 }
 
 impl SchedulerAdapterInterface for IPVSDsyncTSNScheduling {
-    fn compute_schedule(flow: Flow) -> Schedule {
+    fn compute_schedule(&self, flow: Flow) -> Schedule {
         // TODO call sched-algo
         dbg!("compute schedule from flow");
         dbg!(flow);
         Schedule {}
     }
 
-    fn set_cnc_ref(&mut self, cnc: Weak<RefCell<Cnc>>) {
+    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>) {
         self.cnc = Some(cnc);
     }
 }

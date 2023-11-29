@@ -1,8 +1,7 @@
 use super::Cnc;
 use std::{
-    cell::RefCell,
     net::{IpAddr, Ipv4Addr},
-    sync::Weak,
+    sync::{RwLock, Weak},
 };
 
 pub trait TopologyControllerInterface {
@@ -14,7 +13,7 @@ pub trait TopologyAdapterInterface {
     fn get_node_information(&self, id: u32) -> Option<&NodeInformation>;
 
     // CNC Configuration
-    fn set_cnc_ref(&mut self, cnc: Weak<RefCell<Cnc>>);
+    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 
 pub enum NodeType {
@@ -44,7 +43,7 @@ pub struct Topology {
 
 pub struct MockTopology {
     topology: Topology,
-    cnc: Option<Weak<RefCell<Cnc>>>,
+    cnc: Option<Weak<RwLock<Cnc>>>,
 }
 
 impl MockTopology {
@@ -146,7 +145,7 @@ impl TopologyAdapterInterface for MockTopology {
         &self.topology
     }
 
-    fn set_cnc_ref(&mut self, cnc: Weak<RefCell<Cnc>>) {
+    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>) {
         self.cnc = Some(cnc);
     }
 }
