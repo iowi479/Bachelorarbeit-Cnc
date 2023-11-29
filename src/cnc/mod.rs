@@ -5,14 +5,12 @@ pub mod storage;
 pub mod topology;
 pub mod tsntypes;
 
-use crate::cnc::tsntypes::uni_types::Domain;
-
-use self::northbound::NorthboundAdapterInterface;
+use self::middleware::SchedulerAdapterInterface;
+use self::northbound::{NorthboundAdapterInterface, NorthboundControllerInterface};
 use self::southbound::SouthboundAdapterInterface;
 use self::storage::StorageAdapterInterface;
 use self::topology::{TopologyAdapterInterface, TopologyControllerInterface};
-use self::tsntypes::uni_types::Stream;
-use self::{middleware::SchedulerAdapterInterface, northbound::NorthboundControllerInterface};
+use self::tsntypes::uni_types::{Domain, Stream};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, RwLock, Weak};
 use std::thread;
