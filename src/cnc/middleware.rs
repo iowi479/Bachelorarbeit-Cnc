@@ -2,6 +2,7 @@ use std::sync::{RwLock, Weak};
 
 use super::Cnc;
 
+#[derive(Debug)]
 pub struct Schedule {
     // TODO impl computed Schedule
 }
