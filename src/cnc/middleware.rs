@@ -1,21 +1,21 @@
 use std::sync::{RwLock, Weak};
 
-use super::Cnc;
+use super::{topology::Topology, tsntypes::uni_types::Stream, Cnc};
 
 #[derive(Debug)]
 pub struct Schedule {
     // TODO impl computed Schedule
 }
 
-#[derive(Debug)]
-pub struct Flow {
-    // TODO impl flows
-}
-
 pub trait SchedulerAdapterInterface {
-    fn compute_schedule(&self, flow: Flow) -> Schedule;
+    // TODO streams sorted by domain?
+    fn compute_schedule(&self, topology: &Topology, streams: Vec<&Stream>) -> Schedule;
 
-    // CNC Configuration
+    /// # CNC Configuration
+    /// Minimum requirement:
+    /// ```
+    /// self.cnc = Some(cnc);
+    /// ```
     fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 
@@ -31,10 +31,9 @@ impl IPVSDsyncTSNScheduling {
 }
 
 impl SchedulerAdapterInterface for IPVSDsyncTSNScheduling {
-    fn compute_schedule(&self, flow: Flow) -> Schedule {
+    fn compute_schedule(&self, topology: &Topology, streams: Vec<&Stream>) -> Schedule {
         // TODO call sched-algo
         dbg!("compute schedule from flow");
-        dbg!(flow);
         Schedule {}
     }
 
