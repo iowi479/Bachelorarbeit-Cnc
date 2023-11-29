@@ -198,7 +198,7 @@ impl StorageAdapterInterface for FileStorage {
         if could_load_configs.is_err() {
             // no configurations could be loaded
             self.configs = Vec::new();
-            self.save_domains();
+            self.save_configs();
         }
     }
 
