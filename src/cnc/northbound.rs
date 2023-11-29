@@ -1,4 +1,3 @@
-use std::sync::mpsc::Sender;
 use std::sync::{RwLock, Weak};
 use std::thread;
 use std::time::Duration;
