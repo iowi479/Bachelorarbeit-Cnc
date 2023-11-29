@@ -1,5 +1,9 @@
+use std::sync::mpsc::Sender;
 use std::sync::{RwLock, Weak};
+use std::thread;
+use std::time::Duration;
 
+use super::tsntypes::notification_types::NotificationContent;
 use super::tsntypes::uni_types::{
     compute_all_streams, compute_planned_and_modified_streams, compute_streams, remove_streams,
     request_domain_id, request_free_stream_id,
@@ -15,11 +19,19 @@ use super::tsntypes::tsn_types::{
 // Communication Component <--> CNC
 pub trait NorthboundAdapterInterface {
     // Notifications: notfiy CUC on completed task
-    fn compute_streams_completed(&self);
-    fn configure_streams_completed(&self);
-    fn remove_streams_completed(&self);
+    fn compute_streams_completed(&self, notification: NotificationContent);
+    fn configure_streams_completed(&self, notification: NotificationContent);
+    fn remove_streams_completed(&self, notification: NotificationContent);
 
-    // CNC Configuration
+    /// running this component continously
+    ///
+    /// possibly in a new Thread
+    ///
+    /// # Important
+    /// This has to be non-blocking!
+    fn run(&self);
+
+    /// CNC Configuration
     fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 
@@ -48,7 +60,8 @@ pub trait NorthboundControllerInterface {
     fn remove_streams(&self, input: remove_streams::Input) -> remove_streams::Output;
 
     // TODO type touple... correct?
-    fn stream_request(&self, request: Vec<(GroupTalker, Vec<GroupListener>)>);
+    // fn stream_request(&self, request: Vec<(GroupTalker, Vec<GroupListener>)>);
+    fn set_streams(&self, request: Vec<(GroupTalker, Vec<GroupListener>)>);
 }
 
 pub struct MockUniAdapter {
@@ -61,24 +74,7 @@ impl MockUniAdapter {
         Self { cnc: None }
     }
 
-    // TODO testing
-    pub fn test(&self) {
-        let x = Self::get_example_add_stream();
-        let r = self.cnc.as_ref().unwrap().upgrade().unwrap();
-
-        r.read().unwrap().stream_request(x);
-        println!(
-            "free stream id: {}",
-            r.read()
-                .unwrap()
-                .request_free_stream_id(request_free_stream_id::Input {
-                    domain_id: String::from("test-domain-id"),
-                    cuc_id: String::from("test-cuc-id")
-                })
-        );
-    }
-
-    fn get_example_add_stream() -> Vec<(GroupTalker, Vec<GroupListener>)> {
+    pub fn get_example_add_stream() -> Vec<(GroupTalker, Vec<GroupListener>)> {
         let mut result: Vec<(GroupTalker, Vec<GroupListener>)> = Vec::new();
 
         // 1
@@ -167,17 +163,49 @@ impl MockUniAdapter {
 }
 
 impl NorthboundAdapterInterface for MockUniAdapter {
-    fn compute_streams_completed(&self) {
-        println!("[Northbound]-[MockUniAdapter] Notification: compute_stream_completed");
+    fn compute_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound]-[MockUniAdapter] Notification: compute_stream_completed \n {notification:?}");
     }
-    fn configure_streams_completed(&self) {
-        println!("[Northbound]-[MockUniAdapter] Notification: configure_streams_completed");
+    fn configure_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound]-[MockUniAdapter] Notification: configure_streams_completed \n {notification:?}");
     }
-    fn remove_streams_completed(&self) {
-        println!("[Northbound]-[MockUniAdapter] Notification: remove_streams_completed");
+    fn remove_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound]-[MockUniAdapter] Notification: remove_streams_completed \n {notification:?}");
     }
 
     fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>) {
         self.cnc = Some(cnc);
+    }
+
+    /// currently this does:
+    /// - addStream ...00:00-01
+    /// - compute call
+    /// - remove stream ...00:00-01
+    fn run(&self) {
+        // ref to cnc for moving to second thread
+        let cnc = self.cnc.as_ref().unwrap().clone().upgrade().unwrap();
+
+        // TODO implement what this component does
+        thread::spawn(move || loop {
+            thread::sleep(Duration::from_secs(2));
+            // set stream-data
+            cnc.read()
+                .unwrap()
+                .set_streams(MockUniAdapter::get_example_add_stream());
+
+            thread::sleep(Duration::from_secs(5));
+            // start a scheduling run
+            // TODO fill vector
+            cnc.read().unwrap().compute_all_streams(Vec::new());
+
+            thread::sleep(Duration::from_secs(5));
+            let res = cnc
+                .read()
+                .unwrap()
+                .remove_streams(vec![String::from("00-00-00-00-00-00:00-01")]);
+            println!("[Northbound] response to remove_streams {res}");
+
+            thread::sleep(Duration::from_secs(5));
+        });
     }
 }
