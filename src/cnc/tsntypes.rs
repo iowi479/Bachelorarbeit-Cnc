@@ -313,6 +313,7 @@ pub mod shed_types {
     use serde::{Deserialize, Serialize};
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
+
     pub struct GateControlEntry {
         operation_name: Box<GateControlEntry>,
         time_interval_value: u32,
