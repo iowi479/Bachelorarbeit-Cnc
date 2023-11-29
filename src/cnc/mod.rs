@@ -5,17 +5,23 @@ pub mod storage;
 pub mod topology;
 pub mod tsntypes;
 
+use self::middleware::Flow;
 use self::northbound::NorthboundAdapterInterface;
 use self::southbound::SouthboundAdapterInterface;
-use self::storage::{StorageAdapterInterface, StorageControllerInterface};
-use self::topology::TopologyAdapterInterface;
+use self::storage::StorageAdapterInterface;
+use self::topology::{TopologyAdapterInterface, TopologyControllerInterface};
 use self::tsntypes::uni_types::Stream;
 use self::{middleware::SchedulerAdapterInterface, northbound::NorthboundControllerInterface};
+use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, RwLock, Weak};
+use std::thread;
+use std::time::Duration;
 
 pub struct Cnc {
     id: u32,
     domain: String,
+
+    schedule_sender: Sender<String>,
 
     northbound: Arc<RwLock<Box<dyn NorthboundAdapterInterface + Send + Sync>>>,
     southbound: Arc<RwLock<Box<dyn SouthboundAdapterInterface + Send + Sync>>>,
@@ -25,7 +31,7 @@ pub struct Cnc {
 }
 
 impl Cnc {
-    pub fn new(
+    pub fn run(
         id: u32,
         domain: String,
         mut northbound: Box<dyn NorthboundAdapterInterface + Send + Sync>,
@@ -33,7 +39,11 @@ impl Cnc {
         mut storage: Box<dyn StorageAdapterInterface + Send + Sync>,
         mut topology: Box<dyn TopologyAdapterInterface + Send + Sync>,
         mut scheduler: Box<dyn SchedulerAdapterInterface + Send + Sync>,
-    ) -> Arc<RwLock<Self>> {
+    ) {
+        // Channel for starting a computation
+        // TODO create Enum for the operations
+        let (start_schedule, rx): (Sender<String>, Receiver<String>) = mpsc::channel();
+
         let controller: Arc<RwLock<Self>> = Arc::new_cyclic(|my_weak_ref: &Weak<RwLock<Self>>| {
             // configure all components
             northbound.set_cnc_ref(my_weak_ref.clone());
@@ -42,33 +52,58 @@ impl Cnc {
             topology.set_cnc_ref(my_weak_ref.clone());
             scheduler.set_cnc_ref(my_weak_ref.clone());
 
-            let configured_cnc: RwLock<Cnc> = RwLock::new(Self {
+            RwLock::new(Self {
                 id,
                 domain,
+                schedule_sender: start_schedule,
                 northbound: Arc::new(RwLock::new(northbound)),
                 southbound: Arc::new(RwLock::new(southbound)),
                 storage: Arc::new(RwLock::new(storage)),
                 topology: Arc::new(RwLock::new(topology)),
                 scheduler: Arc::new(RwLock::new(scheduler)),
-            });
-
-            println!("[CNC] Successfully configured. Its now ready for use...");
-            return configured_cnc;
+            })
         });
+        println!("[CNC] Successfully configured. Its now ready for use...");
 
-        // configuration after cnc creation due to use of the cnc reference
-        controller
-            .read()
-            .unwrap()
-            .storage
-            .write()
-            .unwrap()
-            .configure_storage();
+        // configuration of all Components
+        let cnc = controller.read().unwrap();
+        cnc.northbound.read().unwrap().run();
+        cnc.topology.read().unwrap().run();
+        cnc.storage.write().unwrap().configure_storage();
 
-        // TODO for testing
-        // controller.read().unwrap().northbound.read().unwrap().test();
+        // freeing aquired readlock
+        drop(cnc);
 
-        return controller;
+        // ---- wait for calculations
+        for msg in rx {
+            // TODO start calculations
+            println!("[SCHEDULER]: {msg}");
+
+            println!("[SCHEDULER]: computing...");
+
+            let scheduler_ref = controller.read().unwrap().scheduler.clone();
+            // TODO create flow
+            // This blocks...
+            let s = scheduler_ref.read().unwrap().compute_schedule(Flow {});
+
+            thread::sleep(Duration::from_secs(4));
+            println!("[SCHEDULER]: computation successfull {s:?}");
+            let nb_adapter_ref = controller.read().unwrap().northbound.clone();
+            nb_adapter_ref
+                .read()
+                .unwrap()
+                .compute_streams_completed(Vec::new());
+
+            println!("[SCHEDULER]: configuring now...");
+            thread::sleep(Duration::from_secs(4));
+            nb_adapter_ref
+                .read()
+                .unwrap()
+                .configure_streams_completed(Vec::new());
+        }
+        // ----
+
+        println!("[CNC] stopped...");
     }
 
     pub fn get_id(&self) -> u32 {
@@ -84,21 +119,30 @@ impl NorthboundControllerInterface for Cnc {
         &self,
         input: tsntypes::uni_types::compute_all_streams::Input,
     ) -> tsntypes::uni_types::compute_all_streams::Output {
-        String::from("TODO")
+        match self
+            .schedule_sender
+            .send("sending to mainthread... compute all streams".to_string())
+            // TODO implement call
+        {
+            Ok(_) => String::from("Success"),
+            Err(e) => String::from(
+                "error sending compute all streams: ".to_string() + e.to_string().as_str(),
+            ),
+        }
     }
 
     fn compute_planned_and_modified_streams(
         &self,
         input: tsntypes::uni_types::compute_planned_and_modified_streams::Input,
     ) -> tsntypes::uni_types::compute_planned_and_modified_streams::Output {
-        String::from("TODO")
+        todo!()
     }
 
     fn compute_streams(
         &self,
         input: tsntypes::uni_types::compute_streams::Input,
     ) -> tsntypes::uni_types::compute_streams::Output {
-        String::from("TODO")
+        todo!()
     }
 
     fn remove_streams(
@@ -139,7 +183,9 @@ impl NorthboundControllerInterface for Cnc {
             None => String::from("no id"),
         }
     }
-    fn stream_request(
+
+    // TODO tuple als type definieren
+    fn set_streams(
         &self,
         request: Vec<(
             tsntypes::tsn_types::GroupTalker,
@@ -180,8 +226,8 @@ impl NorthboundControllerInterface for Cnc {
     }
 }
 
-impl StorageControllerInterface for Cnc {
-    fn get_cnc_domain_id(&self) -> String {
-        self.domain.clone()
+impl TopologyControllerInterface for Cnc {
+    fn notify_topology_changed(&self) {
+        println!("[CNC] got notified about TopologyChange. But doing nothing about it...");
     }
 }
