@@ -18,7 +18,6 @@ pub struct NetconfAdapter {
 
 impl NetconfAdapter {
     pub fn new() -> Self {
-        // TODO constructor
         Self { id: 0, cnc: None }
     }
 }
