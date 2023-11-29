@@ -2,5 +2,5 @@
 /Cargo.lock
 /.vscode
 
-/domains.json
-/configs.json
+/domain_storage.json
+/config_storage.json
