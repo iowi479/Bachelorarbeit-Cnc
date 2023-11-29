@@ -73,8 +73,8 @@ type Config = (u32, ConfigurableGateParameterTableEntry);
 impl FileStorage {
     pub fn new() -> Self {
         Self {
-            domains_path: "domains.json",
-            configs_path: "configs.json",
+            domains_path: "domain_storage.json",
+            configs_path: "config_storage.json",
             domains: Vec::new(),
             configs: Vec::new(),
             cnc: None,
