@@ -7,7 +7,11 @@ pub trait SouthboundAdapterInterface {
     fn send_config(&self, config: SchedParameters);
     fn retrieve_station_capibilities(&self);
 
-    // CNC Configuration
+    /// # CNC Configuration
+    /// Minimum requirement:
+    /// ```
+    /// self.cnc = Some(cnc);
+    /// ```
     fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 

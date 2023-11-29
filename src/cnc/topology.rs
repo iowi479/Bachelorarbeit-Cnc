@@ -22,7 +22,11 @@ pub trait TopologyAdapterInterface {
     /// This has to be non-blocking!
     fn run(&self);
 
-    /// CNC Configuration
+    /// # CNC Configuration
+    /// Minimum requirement:
+    /// ```
+    /// self.cnc = Some(cnc);
+    /// ```
     fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 
@@ -160,7 +164,7 @@ impl TopologyAdapterInterface for MockTopology {
     }
 
     fn run(&self) {
-        let cnc = self.cnc.as_ref().unwrap().upgrade().unwrap();
+        let cnc = self.cnc.as_ref().unwrap().upgrade().unwrap().clone();
         thread::spawn(move || loop {
             thread::sleep(Duration::from_secs(10));
             println!("[Topology] Topology Changed");
