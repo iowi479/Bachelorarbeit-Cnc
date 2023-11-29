@@ -18,11 +18,12 @@ pub trait StorageAdapterInterface {
     /// This should fully setup everything the Storage-Component needs. After this is called, it has to be ready to operate.
     fn configure_storage(&mut self);
 
+    // TODO get streams refactor for needing domain and cuc id
     fn get_all_streams(&self) -> Vec<&Stream>;
     fn get_streams(&self, ids: Vec<String>) -> Vec<&Stream>;
     fn get_stream(&self, id: String) -> Option<&Stream>;
 
-    fn clear_all_streams(&mut self);
+    fn remove_all_streams(&mut self);
     fn remove_streams(&mut self, ids: Vec<String>);
     fn remove_stream(&mut self, id: String);
 
@@ -168,18 +169,12 @@ impl StorageAdapterInterface for FileStorage {
         let could_load_domains = self.try_load_domains();
 
         if could_load_domains.is_err() {
+            let cnc = self.cnc.as_ref().unwrap().upgrade().unwrap();
+            let cnc_domain: String = cnc.read().unwrap().domain.clone();
+
             // generate Mockdata
             self.domains.push(Domain {
-                domain_id: self
-                    .cnc
-                    .as_ref()
-                    .unwrap()
-                    .upgrade()
-                    .unwrap()
-                    .read()
-                    .unwrap()
-                    .domain
-                    .clone(),
+                domain_id: cnc_domain,
                 cnc_enabled: true,
                 cuc: Vec::new(),
             });
@@ -202,7 +197,7 @@ impl StorageAdapterInterface for FileStorage {
         }
     }
 
-    fn clear_all_streams(&mut self) {
+    fn remove_all_streams(&mut self) {
         self.domains[0].cuc[0].stream.clear();
         self.save_domains();
     }
