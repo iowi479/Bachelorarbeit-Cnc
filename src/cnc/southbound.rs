@@ -1,6 +1,6 @@
 use std::sync::{RwLock, Weak};
 
-use super::{tsntypes::shed_types::SchedParameters, Cnc};
+use super::{types::shed_types::SchedParameters, Cnc};
 
 pub trait SouthboundControllerInterface {}
 pub trait SouthboundAdapterInterface {

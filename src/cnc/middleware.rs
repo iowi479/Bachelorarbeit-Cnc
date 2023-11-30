@@ -1,6 +1,6 @@
 use std::sync::{RwLock, Weak};
 
-use super::{topology::Topology, tsntypes::uni_types::Stream, Cnc};
+use super::{topology::Topology, types::uni_types::Stream, Cnc};
 
 #[derive(Debug)]
 pub struct Schedule {

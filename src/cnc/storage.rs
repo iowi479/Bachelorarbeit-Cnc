@@ -1,5 +1,5 @@
-use super::tsntypes::shed_types::ConfigurableGateParameterTableEntry;
-use super::tsntypes::uni_types::{Cuc, Domain, Stream};
+use super::types::shed_types::ConfigurableGateParameterTableEntry;
+use super::types::uni_types::{Cuc, Domain, Stream};
 use super::Cnc;
 use rand::Rng;
 use std::fs::File;

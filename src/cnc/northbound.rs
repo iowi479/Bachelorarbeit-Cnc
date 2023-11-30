@@ -1,10 +1,10 @@
-use super::tsntypes::notification_types::NotificationContent;
-use super::tsntypes::tsn_types::{
+use super::types::notification_types::NotificationContent;
+use super::types::tsn_types::{
     DataFrameSpecificationElement, DataFrameSpecificationElementType, EndStationInterface,
     GroupIeee802VlanTag, GroupInterfaceCapabilities, GroupInterfaceId, GroupListener, GroupTalker,
     GroupUserToNetworkRequirements, StreamRankContainer, TrafficSpecificationContainer,
 };
-use super::tsntypes::uni_types::{
+use super::types::uni_types::{
     compute_all_streams, compute_planned_and_modified_streams, compute_streams, remove_streams,
     request_domain_id, request_free_stream_id,
 };
@@ -118,7 +118,7 @@ impl MockUniAdapter {
                 DataFrameSpecificationElement {
                     index: 0,
                     field: DataFrameSpecificationElementType::Ieee802MacAddresses(
-                        super::tsntypes::tsn_types::GroupIeee802MacAddress {
+                        super::types::tsn_types::GroupIeee802MacAddress {
                             destination_mac_adress: "00-00-00-0F-00-00".to_string(),
                             source_mac_adress: "00-00-00-00-00-01".to_string(),
                         },
@@ -133,25 +133,24 @@ impl MockUniAdapter {
                 },
             ],
             traffic_specification: TrafficSpecificationContainer {
-                interval: super::tsntypes::tsn_types::TrafficSpecificationInterval {
+                interval: super::types::tsn_types::TrafficSpecificationInterval {
                     numerator: 1000000,
                     denominator: 1000000000,
                 },
                 max_frames_per_interval: 1,
                 max_frame_size: 1,
                 transmission_selection: 0,
-                time_aware: super::tsntypes::tsn_types::TimeAwareContainer {
+                time_aware: super::types::tsn_types::TimeAwareContainer {
                     earliest_transmit_offset: 100,
                     latest_transmit_offset: 500000,
                     jitter: 0,
                 },
             },
-            user_to_network_requirements:
-                super::tsntypes::tsn_types::GroupUserToNetworkRequirements {
-                    num_seemless_trees: 1,
-                    max_latency: 100000,
-                },
-            interface_capabilities: super::tsntypes::tsn_types::GroupInterfaceCapabilities {
+            user_to_network_requirements: super::types::tsn_types::GroupUserToNetworkRequirements {
+                num_seemless_trees: 1,
+                max_latency: 100000,
+            },
+            interface_capabilities: super::types::tsn_types::GroupInterfaceCapabilities {
                 vlan_tag_capable: true,
                 // default to empty list - IEEE 8021Q 46.2.3.7.2
                 cb_stream_iden_type_list: Vec::new(),
