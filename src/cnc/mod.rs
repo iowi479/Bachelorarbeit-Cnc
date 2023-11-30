@@ -87,13 +87,6 @@ impl Cnc {
         println!("[CNC] stopped...");
     }
 
-    pub fn get_id(&self) -> u32 {
-        self.id.clone()
-    }
-    pub fn get_domain(&self) -> String {
-        self.domain.clone()
-    }
-
     fn execute_computation(cnc: Arc<RwLock<Cnc>>, computation_type: ComputationType) {
         // for algorithm sorted by domain
         let _domains: Vec<Domain> = Vec::new();
