@@ -1,44 +1,68 @@
-use std::sync::{RwLock, Weak};
-use std::thread;
-use std::time::Duration;
-
 use super::tsntypes::notification_types::NotificationContent;
-use super::tsntypes::uni_types::{
-    compute_all_streams, compute_planned_and_modified_streams, compute_streams, remove_streams,
-    request_domain_id, request_free_stream_id,
-};
-use super::Cnc;
-
 use super::tsntypes::tsn_types::{
     DataFrameSpecificationElement, DataFrameSpecificationElementType, EndStationInterface,
     GroupIeee802VlanTag, GroupInterfaceCapabilities, GroupInterfaceId, GroupListener, GroupTalker,
     GroupUserToNetworkRequirements, StreamRankContainer, TrafficSpecificationContainer,
 };
+use super::tsntypes::uni_types::{
+    compute_all_streams, compute_planned_and_modified_streams, compute_streams, remove_streams,
+    request_domain_id, request_free_stream_id,
+};
+use super::Cnc;
+use std::sync::{RwLock, Weak};
+use std::thread;
+use std::time::Duration;
 
-// Communication Component <--> CNC
+/// # Northbound Interface
+/// This Trait has to be implemented to use the Component as a Northbound-Interface in the CNC.
+///
+/// This Component is used to communicate with the CUC in a "fully centralized model" of a TSN Network.
+///
+/// This model and the communication (UNI) is specified in the corresponding IEEE Standards 802.1Q and Qdj
 pub trait NorthboundAdapterInterface {
-    // Notifications: notfiy CUC on completed task
+    /// Notification to the CUC.
+    ///
+    /// This gets called when the requested computation of streams is finished.
+    ///
+    /// The NotificationBody including the StreamStatus has to be forwarded to the corresponding CUC instance.
     fn compute_streams_completed(&self, notification: NotificationContent);
+
+    /// Notification to the CUC.
+    ///
+    /// This gets called when the computated streams are configured on all Bridges.
+    ///
+    /// The NotificationBody including the StreamStatus has to be forwarded to the corresponding CUC instance.
     fn configure_streams_completed(&self, notification: NotificationContent);
+
+    /// Notification to the CUC.
+    ///
+    /// This gets called when the requested deletion of streams is finished.
+    ///
+    /// The NotificationBody including the StreamStatus has to be forwarded to the corresponding CUC instance.
     fn remove_streams_completed(&self, notification: NotificationContent);
 
-    /// running this component continously
+    /// Running this component continously
     ///
-    /// possibly in a new Thread
+    ///  -> possibly in a new Thread
+    ///
+    /// While running, all calls of the connected CUC's has to be forwarded to the CNC
     ///
     /// # Important
     /// This has to be non-blocking!
     fn run(&self);
 
-    /// # CNC Configuration
-    /// Minimum requirement:
+    /// CNC Configuration
+    ///
+    /// additional Setup can be performed here
+    ///
+    /// # Minimum requirement:
     /// ```
     /// self.cnc = Some(cnc);
     /// ```
     fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
 }
 
-// Communication Component <--> CNC
+/// This Trait is implemented by the CNC and provides endpoints for the Northbound-Component to trigger actions in the CNC
 pub trait NorthboundControllerInterface {
     // TODO overthink the stuff
     // uni rpc
