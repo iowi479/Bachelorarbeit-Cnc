@@ -414,8 +414,7 @@ pub mod shed_types {
     #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct ConfigurableGateParameterTableEntry {
         // YANG -> The value must be retained across reinitializations of the management system.
-        queue_max_sdu_table: Vec<QueueMaxSduEntry>,
-
+        // queue_max_sdu_table: Vec<QueueMaxSduEntry>,
         gate_enable: bool,
         admin_gate_states: u8, // all 8 gates coded into bit representation
         admin_control_list: Vec<GateControlEntry>,
@@ -425,14 +424,6 @@ pub mod shed_types {
 
         // must not be retained... This applies the config?
         config_change: bool,
-
-        // config false aber The value must be retained across reinitializations of the management system.
-        tick_granularity: u32,
-
-        // following -> Maybe
-        supported_list_max: u32,
-        supported_cycle_max: RationalGrouping,
-        supported_interval_max: u32,
     }
 }
 
