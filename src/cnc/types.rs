@@ -273,7 +273,7 @@ pub mod uni_types {
         pub stream: Vec<Stream>,
     }
 
-    #[derive(Serialize, Deserialize, Clone)]
+    #[derive(Serialize, Deserialize, Clone, PartialEq)]
     pub enum StreamStatus {
         Planned = 0,
         Configured = 1,
@@ -304,7 +304,7 @@ pub mod uni_types {
         pub group_status_talker_listener: tsn_types::GroupStatusTalkerListener,
     }
 
-    pub mod compute_streams {
+    pub mod stream_request {
         // rpc compute_streams
         pub type Input = Vec<Domain>;
 
@@ -315,30 +315,7 @@ pub mod uni_types {
 
         pub struct CucElement {
             pub cuc_id: String,
-            pub stream_list: Vec<crate::cnc::types::tsn_types::StreamIdTypeUpper>,
-        }
-
-        pub type Output = String;
-    }
-
-    pub mod compute_planned_and_modified_streams {
-        // rpc compute_planned_and_modified_streams
-        pub type Input = Vec<Domain>;
-        pub struct Domain {
-            pub domain_id: String,
-            pub cuc: Vec<String>,
-        }
-
-        pub type Output = String;
-    }
-
-    pub mod compute_all_streams {
-        // rpc compute_all_streams
-        pub type Input = Vec<Domain>;
-
-        pub struct Domain {
-            pub domain_id: String,
-            pub cuc: Vec<String>,
+            pub stream_list: Option<Vec<crate::cnc::types::tsn_types::StreamIdTypeUpper>>,
         }
 
         pub type Output = String;
@@ -376,12 +353,12 @@ pub mod shed_types {
     #[derive(Serialize, Deserialize, Clone, Debug)]
 
     pub struct GateControlEntry {
-        operation_name: Box<GateControlEntry>,
-        time_interval_value: u32,
-        gate_state_value: u8,
+        pub operation_name: GateControlOperation,
+        pub time_interval_value: u32,
+        pub gate_state_value: u8,
     }
 
-    #[derive(Debug)]
+    #[derive(Serialize, Deserialize, Debug, Clone)]
     pub enum GateControlOperation {
         SetGateStates,
         SetAndHoldMAC,
@@ -429,15 +406,15 @@ pub mod shed_types {
     pub struct ConfigurableGateParameterTableEntry {
         // YANG -> The value must be retained across reinitializations of the management system.
         // queue_max_sdu_table: Vec<QueueMaxSduEntry>,
-        gate_enable: bool,
-        admin_gate_states: u8, // all 8 gates coded into bit representation
-        admin_control_list: Vec<GateControlEntry>,
-        admin_cycle_time: RationalGrouping,
-        admin_cycle_time_extension: u32,
-        admin_base_time: PtpTimeScale,
+        pub gate_enable: bool,
+        pub admin_gate_states: u8, // all 8 gates coded into bit representation
+        pub admin_control_list: Vec<GateControlEntry>,
+        pub admin_cycle_time: RationalGrouping,
+        pub admin_cycle_time_extension: u32,
+        pub admin_base_time: PtpTimeScale,
 
         // must not be retained... This applies the config?
-        config_change: bool,
+        pub config_change: bool,
     }
 }
 
@@ -455,21 +432,22 @@ pub mod notification_types {
 
     #[derive(Debug)]
     pub struct Domain {
-        domain_id: String,
-        cucs: Vec<Cuc>,
+        pub domain_id: String,
+        pub cucs: Vec<Cuc>,
     }
 
     #[derive(Debug)]
     pub struct Cuc {
-        cuc_id: String,
-        streams: Vec<Stream>,
+        pub cuc_id: String,
+        pub streams: Vec<Stream>,
     }
 
     #[derive(Debug)]
     pub struct Stream {
-        stream_id: StreamIdTypeUpper,
+        pub stream_id: StreamIdTypeUpper,
+
         /// # Values
         /// successful (0) or unsuccessful (1)
-        failure_code: u8,
+        pub failure_code: u8,
     }
 }

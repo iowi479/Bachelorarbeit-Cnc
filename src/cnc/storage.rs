@@ -1,5 +1,5 @@
 use super::types::shed_types::ConfigurableGateParameterTableEntry;
-use super::types::uni_types::{Cuc, Domain, Stream};
+use super::types::uni_types::{self, stream_request, Cuc, Stream, StreamStatus};
 use super::Cnc;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -10,9 +10,6 @@ use std::sync::{RwLock, Weak};
 // TODO should probably be removed
 const DEFAULT_CUC_ID: &str = "test-cuc-id";
 
-// TODO propably not needed since Storagecomponent doesnt need to access CNC
-pub trait StorageControllerInterface {}
-
 /// Any StorageComponent that should be used with the CNC must implement this trait.
 pub trait StorageAdapterInterface {
     /// This gets called when the CNC is created and linked via this.set_cnc_ref(...);
@@ -21,8 +18,16 @@ pub trait StorageAdapterInterface {
 
     // TODO get streams refactor for needing domain and cuc id
     fn get_all_streams(&self) -> Vec<Stream>;
-    fn get_streams(&self, domain: String, cuc_id: String) -> Vec<Stream>;
+    fn get_streams_in_domains(
+        &self,
+        domains: Vec<stream_request::Domain>,
+    ) -> Vec<uni_types::Domain>;
+    fn get_streams_in_domain(&self, domain: stream_request::Domain) -> Vec<uni_types::Domain>;
     fn get_stream(&self, id: String) -> Option<Stream>;
+    fn get_planned_and_modified_streams_in_domains(
+        &self,
+        domains: Vec<stream_request::Domain>,
+    ) -> Vec<uni_types::Domain>;
 
     fn remove_all_streams(&self);
     fn remove_streams(&self, ids: Vec<String>);
@@ -30,6 +35,7 @@ pub trait StorageAdapterInterface {
 
     fn set_stream(&self, stream: Stream);
     fn set_streams(&self, streams: Vec<Stream>);
+    fn set_streams_configured(&self, domains: &Vec<uni_types::Domain>);
 
     /// Returns the domain of the requesting CUC
     /// If the domain or cuc_id could not be found: returns None
@@ -39,7 +45,7 @@ pub trait StorageAdapterInterface {
     fn get_config(&self, node_id: u32) -> Option<Config>;
 
     fn set_config(&self, config: Config);
-    fn set_configs(&self, configs: Vec<Config>);
+    fn set_configs(&self, configs: &Vec<Config>);
     /// In the fully centralized model, this should not be used.
     /// The CUC should take care of that because it nows the MAC-Addresses of its listeners.
     /// This implementation returns a free id but with MAC-Address 0
@@ -63,9 +69,8 @@ pub struct FileStorage {
     domains_path: &'static str,
     configs_path: &'static str,
 
-    domains: RwLock<Vec<Domain>>,
+    domains: RwLock<Vec<uni_types::Domain>>,
 
-    // TODO which types for tas-configuration?
     configs: RwLock<Vec<Config>>,
     cnc: Weak<Cnc>, // ref to cnc
 }
@@ -152,7 +157,8 @@ impl FileStorage {
 
     fn try_load_domains(&self) -> Result<(), Error> {
         let content: String = Self::read_from_file(self.domains_path)?;
-        let domains: Vec<Domain> = serde_json::from_str::<Vec<Domain>>(&content)?;
+        let domains: Vec<uni_types::Domain> =
+            serde_json::from_str::<Vec<uni_types::Domain>>(&content)?;
         let mut domains_lock = self.domains.write().unwrap();
         *domains_lock = domains;
         drop(domains_lock);
@@ -189,7 +195,7 @@ impl StorageAdapterInterface for FileStorage {
             let mut domain_lock = self.domains.write().unwrap();
 
             // generate Mockdata
-            domain_lock.push(Domain {
+            domain_lock.push(uni_types::Domain {
                 domain_id: cnc_domain,
                 cnc_enabled: true,
                 cuc: Vec::new(),
@@ -249,20 +255,29 @@ impl StorageAdapterInterface for FileStorage {
         }
     }
 
-    fn get_streams(&self, domain_id: String, cuc_id: String) -> Vec<Stream> {
+    fn get_streams_in_domain(&self, get_domain: stream_request::Domain) -> Vec<uni_types::Domain> {
         let domain_lock = self.domains.write().unwrap();
+        let mut result: Vec<uni_types::Domain> = Vec::new();
 
         for domain in domain_lock.iter() {
-            if domain.domain_id == domain_id {
+            if domain.domain_id == get_domain.domain_id {
+                let mut result_domain = uni_types::Domain {
+                    domain_id: domain.domain_id.clone(),
+                    cnc_enabled: domain.cnc_enabled.clone(),
+                    cuc: Vec::new(),
+                };
+
                 for cuc in domain.cuc.iter() {
-                    if cuc.cuc_id == cuc_id {
-                        return cuc.stream.clone();
+                    if cuc.cuc_id == get_domain.cuc[0].cuc_id {
+                        result_domain.cuc.push(cuc.clone());
                     }
                 }
+
+                result.push(result_domain);
             }
         }
         drop(domain_lock);
-        Vec::new()
+        return result;
     }
 
     fn get_all_streams(&self) -> Vec<Stream> {
@@ -378,9 +393,110 @@ impl StorageAdapterInterface for FileStorage {
         self.save_configs();
     }
 
-    fn set_configs(&self, configs: Vec<Config>) {
-        for config in configs {
-            self.set_config(config);
+    fn set_configs(&self, configs: &Vec<Config>) {
+        for config in configs.iter() {
+            self.set_config(config.clone());
+        }
+    }
+
+    /// goes through all domains and retures all with all subsecuent cucs and all their streams
+    fn get_streams_in_domains(
+        &self,
+        domains: Vec<stream_request::Domain>,
+    ) -> Vec<uni_types::Domain> {
+        let mut result: Vec<uni_types::Domain> = Vec::new();
+
+        for req_domain in domains.iter() {
+            for domain in self.domains.read().unwrap().iter() {
+                if req_domain.domain_id == domain.domain_id {
+                    let mut domain_copy = uni_types::Domain {
+                        domain_id: domain.domain_id.clone(),
+                        cnc_enabled: domain.cnc_enabled,
+                        cuc: Vec::new(),
+                    };
+
+                    for req_cuc in req_domain.cuc.iter() {
+                        for cuc in domain.cuc.iter() {
+                            if req_cuc.cuc_id == cuc.cuc_id {
+                                domain_copy.cuc.push(cuc.clone());
+                            }
+                        }
+                    }
+
+                    result.push(domain_copy);
+                }
+            }
+        }
+
+        result
+    }
+
+    /// goes through all domains and retures all with all subsecuent cucs and their planned or modified streams
+    fn get_planned_and_modified_streams_in_domains(
+        &self,
+        domains: Vec<stream_request::Domain>,
+    ) -> Vec<uni_types::Domain> {
+        let mut result: Vec<uni_types::Domain> = Vec::new();
+
+        for req_domain in domains.iter() {
+            for domain in self.domains.read().unwrap().iter() {
+                if req_domain.domain_id == domain.domain_id {
+                    let mut domain_copy = uni_types::Domain {
+                        domain_id: domain.domain_id.clone(),
+                        cnc_enabled: domain.cnc_enabled,
+                        cuc: Vec::new(),
+                    };
+
+                    for req_cuc in req_domain.cuc.iter() {
+                        for cuc in domain.cuc.iter() {
+                            if req_cuc.cuc_id == cuc.cuc_id {
+                                let mut cuc_copy = uni_types::Cuc {
+                                    cuc_id: cuc.cuc_id.clone(),
+                                    stream: Vec::new(),
+                                };
+
+                                for stream in cuc.stream.iter() {
+                                    if stream.stream_status == StreamStatus::Planned
+                                        || stream.stream_status == StreamStatus::Modified
+                                    {
+                                        cuc_copy.stream.push(stream.clone());
+                                    }
+                                }
+
+                                domain_copy.cuc.push(cuc_copy);
+                            }
+                        }
+                    }
+
+                    result.push(domain_copy);
+                }
+            }
+        }
+
+        result
+    }
+
+    /// sets StreamStatus to Configured on all provided streams
+    fn set_streams_configured(&self, domains: &Vec<uni_types::Domain>) {
+        let mut domain_lock = self.domains.write().unwrap();
+        for change_domain in domains.iter() {
+            for domain in domain_lock.iter_mut() {
+                if domain.domain_id == change_domain.domain_id {
+                    for change_cuc in change_domain.cuc.iter() {
+                        for cuc in domain.cuc.iter_mut() {
+                            if cuc.cuc_id == change_cuc.cuc_id {
+                                for change_stream in change_cuc.stream.iter() {
+                                    for stream in cuc.stream.iter_mut() {
+                                        if stream.stream_id == change_stream.stream_id {
+                                            stream.stream_status = StreamStatus::Configured;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

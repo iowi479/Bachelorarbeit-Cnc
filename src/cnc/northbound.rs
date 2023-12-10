@@ -5,13 +5,12 @@ use super::types::tsn_types::{
     GroupUserToNetworkRequirements, StreamRankContainer, TrafficSpecificationContainer,
 };
 use super::types::uni_types::{
-    compute_all_streams, compute_planned_and_modified_streams, compute_streams, remove_streams,
-    request_domain_id, request_free_stream_id,
+    remove_streams, request_domain_id, request_free_stream_id, stream_request,
 };
-use super::Cnc;
+use super::{Cnc, ComputationType};
 use std::sync::Weak;
-use std::thread;
 use std::time::Duration;
+use std::{thread, vec};
 
 /// # Northbound Interface
 /// This Trait has to be implemented to use the Component as a Northbound-Interface in the CNC.
@@ -64,17 +63,7 @@ pub trait NorthboundAdapterInterface {
 
 /// This Trait is implemented by the CNC and provides endpoints for the Northbound-Component to trigger actions in the CNC
 pub trait NorthboundControllerInterface {
-    // TODO overthink the stuff
-    // uni rpc
-    fn compute_streams(&self, input: compute_streams::Input) -> compute_streams::Output;
-
-    fn compute_planned_and_modified_streams(
-        &self,
-        input: compute_planned_and_modified_streams::Input,
-    ) -> compute_planned_and_modified_streams::Output;
-
-    fn compute_all_streams(&self, input: compute_all_streams::Input)
-        -> compute_all_streams::Output;
+    fn compute_streams(&self, computation: ComputationType) -> stream_request::Output;
 
     fn request_domain_id(&self, input: request_domain_id::Input) -> request_domain_id::Output;
 
@@ -214,16 +203,23 @@ impl NorthboundAdapterInterface for MockUniAdapter {
         let cnc = self.cnc.upgrade().unwrap().clone();
 
         // TODO implement what this component does
+        println!("[Northbound] running now...");
         thread::spawn(move || loop {
-            println!("[Northbound] listening...");
             thread::sleep(Duration::from_secs(2));
             // set stream-data
             cnc.set_streams(MockUniAdapter::get_example_add_stream());
 
             thread::sleep(Duration::from_secs(5));
+
             // start a scheduling run
-            // TODO fill vector
-            cnc.compute_all_streams(Vec::new());
+            let domain: Vec<stream_request::Domain> = vec![stream_request::Domain {
+                domain_id: String::from("test-domain-id"),
+                cuc: vec![stream_request::CucElement {
+                    cuc_id: String::from("test-cuc-id"),
+                    stream_list: None,
+                }],
+            }];
+            cnc.compute_streams(ComputationType::All(domain));
 
             thread::sleep(Duration::from_secs(5));
             let res = cnc.remove_streams(vec![String::from("00-00-00-00-00-00:00-01")]);

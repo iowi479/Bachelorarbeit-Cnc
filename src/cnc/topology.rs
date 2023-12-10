@@ -7,7 +7,7 @@ use std::{
 };
 
 pub trait TopologyControllerInterface {
-    fn notify_topology_changed(&self);
+    fn notify_topology_changed(&self) {}
 }
 
 pub trait TopologyAdapterInterface {
@@ -75,6 +75,17 @@ pub struct Topology {
     pub nodes: Vec<NodeInformation>,
     pub connections: Vec<Connection>,
     pub paths: Option<Vec<Path>>,
+}
+
+impl Topology {
+    pub fn get_node(&self, node_id: u32) -> Option<NodeInformation> {
+        for node in self.nodes.iter() {
+            if node.id == node_id {
+                return Some(node.clone());
+            }
+        }
+        return None;
+    }
 }
 
 pub struct MockTopology {
@@ -183,8 +194,8 @@ impl TopologyAdapterInterface for MockTopology {
         thread::spawn(move || loop {
             thread::sleep(Duration::from_secs(1));
             thread::sleep(Duration::from_secs(10));
-            println!("[Topology] Topology Changed");
             cnc.notify_topology_changed();
+            // println!("[Topology] Topology Changed");
         });
     }
 }

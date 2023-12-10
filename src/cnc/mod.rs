@@ -5,21 +5,21 @@ pub mod storage;
 pub mod topology;
 pub mod types;
 
+use crate::cnc::types::notification_types::{self, NotificationContent};
+
 use self::middleware::SchedulerAdapterInterface;
 use self::northbound::{NorthboundAdapterInterface, NorthboundControllerInterface};
 use self::southbound::SouthboundAdapterInterface;
 use self::storage::StorageAdapterInterface;
-use self::topology::{TopologyAdapterInterface, TopologyControllerInterface};
-use self::types::uni_types::{Domain, Stream};
+use self::topology::{Topology, TopologyAdapterInterface, TopologyControllerInterface};
+use self::types::uni_types::{self, Stream};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Weak};
-use std::thread;
-use std::time::Duration;
 
 pub struct Cnc {
     id: u32,
     domain: String,
-    schedule_sender: Sender<ComputationType>,
+    schedule_computation_sender: Sender<ComputationType>,
 
     northbound: Arc<dyn NorthboundAdapterInterface + Send + Sync>,
     southbound: Arc<dyn SouthboundAdapterInterface + Send + Sync>,
@@ -28,10 +28,10 @@ pub struct Cnc {
     scheduler: Arc<dyn SchedulerAdapterInterface + Send + Sync>,
 }
 
-enum ComputationType {
-    All(types::uni_types::compute_all_streams::Input),
-    PlannedAndModified(types::uni_types::compute_planned_and_modified_streams::Input),
-    List(types::uni_types::compute_streams::Input),
+pub enum ComputationType {
+    All(types::uni_types::stream_request::Input),
+    PlannedAndModified(types::uni_types::stream_request::Input),
+    List(types::uni_types::stream_request::Input),
 }
 
 impl Cnc {
@@ -45,9 +45,10 @@ impl Cnc {
         mut scheduler: Arc<dyn SchedulerAdapterInterface + Send + Sync>,
     ) {
         // Channel for starting a computation
-        // TODO create Enum for the operations
-        let (start_schedule, rx): (Sender<ComputationType>, Receiver<ComputationType>) =
-            mpsc::channel();
+        let (schedule_computation_sender, schedule_computation_receiver): (
+            Sender<ComputationType>,
+            Receiver<ComputationType>,
+        ) = mpsc::channel();
 
         let cnc: Arc<Self> = Arc::new_cyclic(|my_weak_ref: &Weak<Self>| {
             // configure all components
@@ -74,7 +75,7 @@ impl Cnc {
             Self {
                 id,
                 domain,
-                schedule_sender: start_schedule,
+                schedule_computation_sender,
                 northbound,
                 southbound,
                 storage,
@@ -82,7 +83,10 @@ impl Cnc {
                 scheduler,
             }
         });
-        println!("[CNC] Successfully configured. Its now ready for use...");
+        println!(
+            "[CNC] id: {} - Successfully configured. Its now ready for use...",
+            cnc.id
+        );
 
         // configuration of all Components
         cnc.northbound.run();
@@ -90,7 +94,7 @@ impl Cnc {
         cnc.storage.configure_storage();
 
         // wait for computation-requests
-        for computation_type in rx {
+        for computation_type in schedule_computation_receiver {
             Cnc::execute_computation(cnc.clone(), computation_type);
         }
 
@@ -99,67 +103,78 @@ impl Cnc {
     }
 
     fn execute_computation(cnc: Arc<Cnc>, computation_type: ComputationType) {
-        // for algorithm sorted by domain
-        let _domains: Vec<Domain> = Vec::new();
-        match computation_type {
-            ComputationType::All(_domains) => {
-                // TODO start calculation
-            }
-            ComputationType::PlannedAndModified(_domains) => {
-                // TODO start calculation
-            }
-            ComputationType::List(_domains) => {
-                // TODO start calculation
-            }
-        }
+        println!("[SCHEDULER]: preparing computation...");
 
-        println!("[SCHEDULER]: computing...");
+        let topology: Topology = cnc.topology.get_topology();
+        let domains: Vec<uni_types::Domain> = match computation_type {
+            ComputationType::All(request_domains) => {
+                cnc.storage.get_streams_in_domains(request_domains)
+            }
 
-        let scheduler_ref = cnc.scheduler.clone();
-        // TODO create flow
-        // TODO This blocks... any other way?
-        let s = scheduler_ref.compute_schedule(cnc.topology.get_topology(), Vec::new());
+            ComputationType::PlannedAndModified(request_domains) => cnc
+                .storage
+                .get_planned_and_modified_streams_in_domains(request_domains),
 
-        thread::sleep(Duration::from_secs(4));
+            ComputationType::List(request_domains) => {
+                cnc.storage.get_streams_in_domains(request_domains)
+            }
+        };
+
+        println!("[SCHEDULER]: computing now...");
+
+        let schedule = cnc.scheduler.compute_schedule(&topology, &domains);
+
         println!("[SCHEDULER]: computation successfull");
-        let nb_adapter_ref = cnc.northbound.clone();
-        nb_adapter_ref.compute_streams_completed(Vec::new());
+
+        cnc.northbound.compute_streams_completed(Vec::new());
 
         println!("[SCHEDULER]: configuring now...");
-        thread::sleep(Duration::from_secs(4));
-        nb_adapter_ref.configure_streams_completed(Vec::new());
+
+        cnc.southbound.configure_network(&topology, &schedule);
+
+        println!("[SCHEDULER]: configuring successfull");
+
+        cnc.storage.set_streams_configured(&domains);
+        cnc.storage.set_configs(&schedule.configs);
+
+        // TODO mock notification
+        let mut notification: NotificationContent = Vec::new();
+        for domain in domains.iter() {
+            let mut d = notification_types::Domain {
+                domain_id: domain.domain_id.clone(),
+                cucs: Vec::new(),
+            };
+
+            for cuc in domain.cuc.iter() {
+                let mut c = notification_types::Cuc {
+                    cuc_id: cuc.cuc_id.clone(),
+                    streams: Vec::new(),
+                };
+
+                for stream in cuc.stream.iter() {
+                    let s = notification_types::Stream {
+                        stream_id: stream.stream_id.clone(),
+                        failure_code: 0,
+                    };
+
+                    c.streams.push(s);
+                }
+
+                d.cucs.push(c);
+            }
+
+            notification.push(d);
+        }
+        cnc.northbound.configure_streams_completed(notification);
     }
 }
 
 impl NorthboundControllerInterface for Cnc {
-    fn compute_all_streams(
-        &self,
-        input: types::uni_types::compute_all_streams::Input,
-    ) -> types::uni_types::compute_all_streams::Output {
-        match self.schedule_sender.send(ComputationType::All(input)) {
-            Ok(_) => String::from("Success"),
-            Err(e) => e.to_string(),
-        }
-    }
-
-    fn compute_planned_and_modified_streams(
-        &self,
-        input: types::uni_types::compute_planned_and_modified_streams::Input,
-    ) -> types::uni_types::compute_planned_and_modified_streams::Output {
-        match self
-            .schedule_sender
-            .send(ComputationType::PlannedAndModified(input))
-        {
-            Ok(_) => String::from("Success"),
-            Err(e) => e.to_string(),
-        }
-    }
-
     fn compute_streams(
         &self,
-        input: types::uni_types::compute_streams::Input,
-    ) -> types::uni_types::compute_streams::Output {
-        match self.schedule_sender.send(ComputationType::List(input)) {
+        computation: ComputationType,
+    ) -> types::uni_types::stream_request::Output {
+        match self.schedule_computation_sender.send(computation) {
             Ok(_) => String::from("Success"),
             Err(e) => e.to_string(),
         }

@@ -1,15 +1,23 @@
 use std::sync::Weak;
 
-use super::{storage::Config, topology::Topology, types::uni_types::Stream, Cnc};
+use super::{
+    storage::{Config, PortConfiguration},
+    topology::{self, Port, Topology},
+    types::{
+        shed_types::{ConfigurableGateParameterTableEntry, GateControlEntry, GateControlOperation},
+        uni_types::{Domain, Stream},
+    },
+    Cnc,
+};
 
 pub struct Schedule {
-    configs: Vec<Config>,
+    pub configs: Vec<Config>,
     // TODO impl computed Schedule
 }
 
 pub trait SchedulerAdapterInterface {
     // TODO streams sorted by domain?
-    fn compute_schedule(&self, topology: Topology, streams: Vec<Stream>) -> Schedule;
+    fn compute_schedule(&self, topology: &Topology, domains: &Vec<Domain>) -> Schedule;
 
     /// # CNC Configuration
     /// Minimum requirement:
@@ -30,12 +38,61 @@ impl IPVSDsyncTSNScheduling {
             cnc: Weak::default(),
         }
     }
+
+    pub fn compute(&self, _topology: &Topology, _domains: &Vec<Domain>) -> Vec<(u32, u32)> {
+        // TODO call Algorithm
+        return vec![(1, 1000)];
+    }
 }
 
 impl SchedulerAdapterInterface for IPVSDsyncTSNScheduling {
-    fn compute_schedule(&self, topology: Topology, streams: Vec<Stream>) -> Schedule {
+    fn compute_schedule(&self, topology: &Topology, domains: &Vec<Domain>) -> Schedule {
         // TODO call sched-algo
-        todo!("compute schedule");
+        // todo!("compute schedule");
+
+        let mut configs: Vec<Config> = Vec::new();
+
+        let starts = self.compute(topology, domains);
+
+        let mut ports: Vec<PortConfiguration> = Vec::new();
+
+        ports.push(PortConfiguration {
+            name: String::from("sw0p2"),
+            config: ConfigurableGateParameterTableEntry {
+                gate_enable: true,
+                admin_gate_states: 255,
+                admin_control_list: vec![GateControlEntry {
+                    operation_name: GateControlOperation::SetGateStates,
+                    time_interval_value: 100000,
+                    gate_state_value: 255,
+                }],
+                admin_cycle_time: (100000, 100000),
+                admin_cycle_time_extension: 0,
+                admin_base_time: starts[0].1,
+                config_change: true,
+            },
+        });
+
+        ports.push(PortConfiguration {
+            name: String::from("sw0p3"),
+            config: ConfigurableGateParameterTableEntry {
+                gate_enable: true,
+                admin_gate_states: 255,
+                admin_control_list: vec![GateControlEntry {
+                    operation_name: GateControlOperation::SetGateStates,
+                    time_interval_value: 100000,
+                    gate_state_value: 255,
+                }],
+                admin_cycle_time: (100000, 100000),
+                admin_cycle_time_extension: 0,
+                admin_base_time: starts[0].1,
+                config_change: true,
+            },
+        });
+
+        configs.push(Config { node_id: 1, ports });
+
+        return Schedule { configs };
     }
 
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
