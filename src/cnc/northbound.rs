@@ -57,7 +57,7 @@ pub trait NorthboundAdapterInterface {
     ///
     /// # Minimum requirement:
     /// ```
-    /// self.cnc = Some(cnc);
+    /// self.cnc = cnc;
     /// ```
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>);
 }
@@ -215,7 +215,7 @@ impl NorthboundAdapterInterface for MockUniAdapter {
 
         // TODO implement what this component does
         thread::spawn(move || loop {
-            println!("[Northbound] looping");
+            println!("[Northbound] listening...");
             thread::sleep(Duration::from_secs(2));
             // set stream-data
             cnc.set_streams(MockUniAdapter::get_example_add_stream());

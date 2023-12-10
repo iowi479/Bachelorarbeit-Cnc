@@ -2,6 +2,7 @@ use super::types::shed_types::ConfigurableGateParameterTableEntry;
 use super::types::uni_types::{Cuc, Domain, Stream};
 use super::Cnc;
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{Error, Read, Write};
 use std::sync::{RwLock, Weak};
@@ -20,7 +21,7 @@ pub trait StorageAdapterInterface {
 
     // TODO get streams refactor for needing domain and cuc id
     fn get_all_streams(&self) -> Vec<Stream>;
-    fn get_streams(&self, ids: Vec<String>) -> Vec<Stream>;
+    fn get_streams(&self, domain: String, cuc_id: String) -> Vec<Stream>;
     fn get_stream(&self, id: String) -> Option<Stream>;
 
     fn remove_all_streams(&self);
@@ -53,7 +54,7 @@ pub trait StorageAdapterInterface {
     /// # CNC Configuration
     /// Minimum requirement:
     /// ```
-    /// self.cnc = Some(cnc);
+    /// self.cnc = cnc;
     /// ```
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>);
 }
@@ -69,7 +70,17 @@ pub struct FileStorage {
     cnc: Weak<Cnc>, // ref to cnc
 }
 
-type Config = (u32, ConfigurableGateParameterTableEntry);
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Config {
+    pub node_id: u32,
+    pub ports: Vec<PortConfiguration>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct PortConfiguration {
+    pub name: String,
+    pub config: ConfigurableGateParameterTableEntry,
+}
 
 impl FileStorage {
     pub fn new() -> Self {
@@ -225,7 +236,6 @@ impl StorageAdapterInterface for FileStorage {
 
             self.save_domains();
         } else {
-            // TODO decide what to do on failure
             println!(
                 "[Storage] Tried to remove stream which doesnt exist: {}",
                 id
@@ -239,21 +249,20 @@ impl StorageAdapterInterface for FileStorage {
         }
     }
 
-    fn get_streams(&self, ids: Vec<String>) -> Vec<Stream> {
-        let mut result: Vec<Stream> = Vec::new();
+    fn get_streams(&self, domain_id: String, cuc_id: String) -> Vec<Stream> {
+        let domain_lock = self.domains.write().unwrap();
 
-        for stream_id in ids {
-            if let Some(stream) = self.get_stream(stream_id.clone()) {
-                result.push(stream.clone());
-            } else {
-                println!(
-                    "[Storage] Tried to request stream which doesnt exist: {}",
-                    stream_id
-                );
+        for domain in domain_lock.iter() {
+            if domain.domain_id == domain_id {
+                for cuc in domain.cuc.iter() {
+                    if cuc.cuc_id == cuc_id {
+                        return cuc.stream.clone();
+                    }
+                }
             }
         }
-
-        result
+        drop(domain_lock);
+        Vec::new()
     }
 
     fn get_all_streams(&self) -> Vec<Stream> {
@@ -343,7 +352,7 @@ impl StorageAdapterInterface for FileStorage {
     fn get_config(&self, node_id: u32) -> Option<Config> {
         let config_lock = self.configs.write().unwrap();
         for config in config_lock.iter() {
-            if config.0 == node_id {
+            if config.node_id == node_id {
                 return Some(config.clone());
             }
         }
@@ -355,7 +364,7 @@ impl StorageAdapterInterface for FileStorage {
     fn set_config(&self, config: Config) {
         let mut config_lock = self.configs.write().unwrap();
         for i in 0..config_lock.len() {
-            if config_lock[i].0 == config.0 {
+            if config_lock[i].node_id == config.node_id {
                 config_lock[i] = config;
                 self.save_configs();
                 return;

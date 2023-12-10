@@ -237,6 +237,20 @@ pub mod tsn_types {
         pub accumulated_latency: u32,
         pub interface_configuration: GroupInterfaceConfiguration,
     }
+
+    // only viable for specific b&r switch since its not in the official IEEE Standard (yet)
+    #[derive(Serialize, Deserialize, Clone)]
+    pub struct BridgePortDelays {
+        pub port_speed: u32,
+        pub dependent_rx_delay_min: u32,
+        pub dependent_rx_delay_max: u32,
+        pub independent_rx_delay_min: u32,
+        pub independent_rx_delay_max: u32,
+        pub independent_rly_delay_min: u32,
+        pub independent_rly_delay_max: u32,
+        pub independent_tx_delay_min: u32,
+        pub independent_tx_delay_max: u32,
+    }
 }
 
 /// Rust-Types for YANG-Models

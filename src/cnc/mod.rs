@@ -121,7 +121,7 @@ impl Cnc {
         let s = scheduler_ref.compute_schedule(cnc.topology.get_topology(), Vec::new());
 
         thread::sleep(Duration::from_secs(4));
-        println!("[SCHEDULER]: computation successfull {s:?}");
+        println!("[SCHEDULER]: computation successfull");
         let nb_adapter_ref = cnc.northbound.clone();
         nb_adapter_ref.compute_streams_completed(Vec::new());
 

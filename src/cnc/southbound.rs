@@ -1,16 +1,18 @@
 use std::sync::Weak;
 
-use super::{types::shed_types::SchedParameters, Cnc};
+use crate::cnc::{topology::Port, types::tsn_types::BridgePortDelays};
+
+use super::{middleware::Schedule, topology::Topology, types::shed_types::SchedParameters, Cnc};
 
 pub trait SouthboundControllerInterface {}
 pub trait SouthboundAdapterInterface {
-    fn send_config(&self, config: SchedParameters);
-    fn retrieve_station_capibilities(&self);
+    fn configure_network(&self, topology: Topology, schedule: Schedule);
+    fn retrieve_station_capibilities(&self, ip: String) -> Vec<Port>;
 
     /// # CNC Configuration
     /// Minimum requirement:
     /// ```
-    /// self.cnc = Some(cnc);
+    /// self.cnc = cnc;
     /// ```
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>);
 }
@@ -30,25 +32,47 @@ impl NetconfAdapter {
 }
 
 impl SouthboundAdapterInterface for NetconfAdapter {
-    fn send_config(&self, config: SchedParameters) {
-        dbg!(self.id);
-        dbg!(config);
-        dbg!("sending config ");
+    fn configure_network(&self, topology: Topology, schedule: Schedule) {}
 
-        // TODO impl config modification
-
-        // read old config using libnetconf2 and <get-config> rpc
-        // modify config with given sched-data using yang2-rs
-        // parse data-tree to xml
-        // create <edit-config> rpc using libnetconf2
-        // send rpc and await <ok> resonse; else error
-    }
-
-    fn retrieve_station_capibilities(&self) {
+    fn retrieve_station_capibilities(&self, ip: String) -> Vec<Port> {
         dbg!("retrieveing stations capibilities");
 
         // TODO impl retrieve capabilites
         // may not be possible atm using netconf
+
+        println!("requesting capabilities of {ip}");
+
+        let mut ports: Vec<Port> = Vec::new();
+
+        ports.push(Port {
+            name: String::from("sn0p2"),
+            delays: vec![
+                BridgePortDelays {
+                    port_speed: 100,
+                    dependent_rx_delay_min: 80000,
+                    dependent_rx_delay_max: 80000,
+                    independent_rx_delay_min: 374,
+                    independent_rx_delay_max: 384,
+                    independent_rly_delay_min: 610,
+                    independent_rly_delay_max: 1350,
+                    independent_tx_delay_min: 2210,
+                    independent_tx_delay_max: 3882,
+                },
+                BridgePortDelays {
+                    port_speed: 1000,
+                    dependent_rx_delay_min: 80000,
+                    dependent_rx_delay_max: 80000,
+                    independent_rx_delay_min: 326,
+                    independent_rx_delay_max: 336,
+                    independent_rly_delay_min: 486,
+                    independent_rly_delay_max: 1056,
+                    independent_tx_delay_min: 994,
+                    independent_tx_delay_max: 2658,
+                },
+            ],
+        });
+
+        return ports;
     }
 
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {

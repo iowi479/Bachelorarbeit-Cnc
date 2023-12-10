@@ -1,7 +1,7 @@
-use super::Cnc;
+use super::{types::tsn_types::BridgePortDelays, Cnc};
 use std::{
     net::{IpAddr, Ipv4Addr},
-    sync::Weak,
+    sync::{RwLock, Weak},
     thread,
     time::Duration,
 };
@@ -11,8 +11,8 @@ pub trait TopologyControllerInterface {
 }
 
 pub trait TopologyAdapterInterface {
-    fn get_topology(&self) -> &Topology;
-    fn get_node_information(&self, id: u32) -> Option<&NodeInformation>;
+    fn get_topology(&self) -> Topology;
+    fn get_node_information(&self, id: u32) -> Option<NodeInformation>;
 
     /// running this component continously
     ///
@@ -25,30 +25,52 @@ pub trait TopologyAdapterInterface {
     /// # CNC Configuration
     /// Minimum requirement:
     /// ```
-    /// self.cnc = Some(cnc);
+    /// self.cnc = cnc;
     /// ```
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>);
 }
 
+#[derive(Clone)]
 pub enum NodeType {
     Bridge,
     EndStation,
 }
 
-pub type Connection = (u32, u32);
+#[derive(Clone)]
+pub struct ConnectionInterface {
+    node_id: u32,
+    port_name: String,
+}
 
+#[derive(Clone)]
+pub struct Connection {
+    id: u32,
+    a: ConnectionInterface,
+    b: ConnectionInterface,
+}
+
+#[derive(Clone)]
 pub struct NodeInformation {
     pub id: u32,
     pub ip: IpAddr,
     pub endstation: NodeType,
+    pub ports: Vec<Port>,
 }
 
+#[derive(Clone)]
+pub struct Port {
+    pub name: String,
+    pub delays: Vec<BridgePortDelays>,
+}
+
+#[derive(Clone)]
 pub struct Path {
     pub node_a_id: u32,
     pub node_b_id: u32,
     pub hops: Vec<u32>,
 }
 
+#[derive(Clone)]
 pub struct Topology {
     pub nodes: Vec<NodeInformation>,
     pub connections: Vec<Connection>,
@@ -56,7 +78,7 @@ pub struct Topology {
 }
 
 pub struct MockTopology {
-    topology: Topology,
+    topology: RwLock<Topology>,
     cnc: Weak<Cnc>,
 }
 
@@ -70,9 +92,7 @@ impl MockTopology {
         --- Mock Topology -----
                   (1)
                  /   \
-               (2)   (3)
-              /     /   \
-            [10]  [11] [12]
+               [10]  11]
         -----------------------
         */
 
@@ -80,56 +100,51 @@ impl MockTopology {
             id: 1,
             ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
             endstation: NodeType::Bridge,
-        });
-        nodes.push(NodeInformation {
-            id: 2,
-            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 2)),
-            endstation: NodeType::Bridge,
-        });
-        nodes.push(NodeInformation {
-            id: 3,
-            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 3)),
-            endstation: NodeType::Bridge,
+            ports: Vec::new(),
         });
 
         nodes.push(NodeInformation {
             id: 10,
             ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 10)),
             endstation: NodeType::EndStation,
+            ports: Vec::new(),
         });
+
         nodes.push(NodeInformation {
             id: 11,
             ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 11)),
             endstation: NodeType::EndStation,
-        });
-        nodes.push(NodeInformation {
-            id: 12,
-            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 12)),
-            endstation: NodeType::EndStation,
+            ports: Vec::new(),
         });
 
-        connections.push((1, 2));
-        connections.push((1, 3));
-        connections.push((2, 10));
-        connections.push((3, 11));
-        connections.push((3, 12));
+        connections.push(Connection {
+            id: 0,
+            a: ConnectionInterface {
+                node_id: 10,
+                port_name: String::from("eth0"),
+            },
+            b: ConnectionInterface {
+                node_id: 1,
+                port_name: String::from("sw0p2"),
+            },
+        });
+
+        connections.push(Connection {
+            id: 1,
+            a: ConnectionInterface {
+                node_id: 11,
+                port_name: String::from("eth0"),
+            },
+            b: ConnectionInterface {
+                node_id: 1,
+                port_name: String::from("sw0p3"),
+            },
+        });
 
         paths.push(Path {
             node_a_id: 10,
             node_b_id: 11,
-            hops: vec![10, 2, 1, 3, 11],
-        });
-
-        paths.push(Path {
-            node_a_id: 10,
-            node_b_id: 12,
-            hops: vec![10, 2, 1, 3, 12],
-        });
-
-        paths.push(Path {
-            node_a_id: 11,
-            node_b_id: 12,
-            hops: vec![11, 3, 12],
+            hops: vec![01],
         });
 
         let topology: Topology = Topology {
@@ -139,24 +154,24 @@ impl MockTopology {
         };
 
         Self {
-            topology,
+            topology: RwLock::new(topology),
             cnc: Weak::default(),
         }
     }
 }
 
 impl TopologyAdapterInterface for MockTopology {
-    fn get_node_information(&self, id: u32) -> Option<&NodeInformation> {
-        for node in self.topology.nodes.iter() {
+    fn get_node_information(&self, id: u32) -> Option<NodeInformation> {
+        for node in self.topology.read().unwrap().nodes.iter() {
             if node.id == id {
-                return Some(node);
+                return Some(node.clone());
             }
         }
         return None;
     }
 
-    fn get_topology(&self) -> &Topology {
-        &self.topology
+    fn get_topology(&self) -> Topology {
+        return self.topology.read().unwrap().clone();
     }
 
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
@@ -166,6 +181,7 @@ impl TopologyAdapterInterface for MockTopology {
     fn run(&self) {
         let cnc = self.cnc.upgrade().unwrap().clone();
         thread::spawn(move || loop {
+            thread::sleep(Duration::from_secs(1));
             thread::sleep(Duration::from_secs(10));
             println!("[Topology] Topology Changed");
             cnc.notify_topology_changed();
