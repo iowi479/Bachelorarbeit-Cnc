@@ -95,6 +95,7 @@ impl Cnc {
         }
 
         println!("[CNC] stopped...");
+        drop(cnc);
     }
 
     fn execute_computation(cnc: Arc<Cnc>, computation_type: ComputationType) {
@@ -117,7 +118,7 @@ impl Cnc {
         let scheduler_ref = cnc.scheduler.clone();
         // TODO create flow
         // TODO This blocks... any other way?
-        let s = scheduler_ref.compute_schedule(cnc.topology.as_ref().get_topology(), Vec::new());
+        let s = scheduler_ref.compute_schedule(cnc.topology.get_topology(), Vec::new());
 
         thread::sleep(Duration::from_secs(4));
         println!("[SCHEDULER]: computation successfull {s:?}");
