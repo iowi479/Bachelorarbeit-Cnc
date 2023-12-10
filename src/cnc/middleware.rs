@@ -2,18 +2,16 @@ use std::sync::Weak;
 
 use super::{
     storage::{Config, PortConfiguration},
-    topology::{self, Port, Topology},
     types::{
-        shed_types::{ConfigurableGateParameterTableEntry, GateControlEntry, GateControlOperation},
-        uni_types::{Domain, Stream},
+        sched_types::{
+            ConfigurableGateParameterTableEntry, GateControlEntry, GateControlOperation,
+        },
+        scheduling::Schedule,
+        topology::Topology,
+        uni_types::Domain,
     },
     Cnc,
 };
-
-pub struct Schedule {
-    pub configs: Vec<Config>,
-    // TODO impl computed Schedule
-}
 
 pub trait SchedulerAdapterInterface {
     // TODO streams sorted by domain?

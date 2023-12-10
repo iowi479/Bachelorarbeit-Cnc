@@ -5,13 +5,14 @@ pub mod storage;
 pub mod topology;
 pub mod types;
 
-use crate::cnc::types::notification_types::{self, NotificationContent};
-
 use self::middleware::SchedulerAdapterInterface;
 use self::northbound::{NorthboundAdapterInterface, NorthboundControllerInterface};
 use self::southbound::SouthboundAdapterInterface;
 use self::storage::StorageAdapterInterface;
-use self::topology::{Topology, TopologyAdapterInterface, TopologyControllerInterface};
+use self::topology::{TopologyAdapterInterface, TopologyControllerInterface};
+use self::types::computation::ComputationType;
+use self::types::notification_types::{self, NotificationContent};
+use self::types::topology::Topology;
 use self::types::uni_types::{self, Stream};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Weak};
@@ -20,18 +21,11 @@ pub struct Cnc {
     id: u32,
     domain: String,
     schedule_computation_sender: Sender<ComputationType>,
-
     northbound: Arc<dyn NorthboundAdapterInterface + Send + Sync>,
     southbound: Arc<dyn SouthboundAdapterInterface + Send + Sync>,
     storage: Arc<dyn StorageAdapterInterface + Send + Sync>,
     topology: Arc<dyn TopologyAdapterInterface + Send + Sync>,
     scheduler: Arc<dyn SchedulerAdapterInterface + Send + Sync>,
-}
-
-pub enum ComputationType {
-    All(types::uni_types::stream_request::Input),
-    PlannedAndModified(types::uni_types::stream_request::Input),
-    List(types::uni_types::stream_request::Input),
 }
 
 impl Cnc {

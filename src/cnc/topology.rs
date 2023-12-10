@@ -1,4 +1,7 @@
-use super::{types::tsn_types::BridgePortDelays, Cnc};
+use super::types::topology::{
+    Connection, ConnectionInterface, NodeInformation, NodeType, Path, Topology,
+};
+use super::Cnc;
 use std::{
     net::{IpAddr, Ipv4Addr},
     sync::{RwLock, Weak},
@@ -28,53 +31,6 @@ pub trait TopologyAdapterInterface {
     /// self.cnc = cnc;
     /// ```
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>);
-}
-
-#[derive(Clone)]
-pub enum NodeType {
-    Bridge,
-    EndStation,
-}
-
-#[derive(Clone)]
-pub struct ConnectionInterface {
-    node_id: u32,
-    port_name: String,
-}
-
-#[derive(Clone)]
-pub struct Connection {
-    id: u32,
-    a: ConnectionInterface,
-    b: ConnectionInterface,
-}
-
-#[derive(Clone)]
-pub struct NodeInformation {
-    pub id: u32,
-    pub ip: IpAddr,
-    pub endstation: NodeType,
-    pub ports: Vec<Port>,
-}
-
-#[derive(Clone)]
-pub struct Port {
-    pub name: String,
-    pub delays: Vec<BridgePortDelays>,
-}
-
-#[derive(Clone)]
-pub struct Path {
-    pub node_a_id: u32,
-    pub node_b_id: u32,
-    pub hops: Vec<u32>,
-}
-
-#[derive(Clone)]
-pub struct Topology {
-    pub nodes: Vec<NodeInformation>,
-    pub connections: Vec<Connection>,
-    pub paths: Option<Vec<Path>>,
 }
 
 impl Topology {
@@ -192,7 +148,6 @@ impl TopologyAdapterInterface for MockTopology {
     fn run(&self) {
         let cnc = self.cnc.upgrade().unwrap().clone();
         thread::spawn(move || loop {
-            thread::sleep(Duration::from_secs(1));
             thread::sleep(Duration::from_secs(10));
             cnc.notify_topology_changed();
             // println!("[Topology] Topology Changed");

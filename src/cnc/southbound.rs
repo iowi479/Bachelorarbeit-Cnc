@@ -1,8 +1,7 @@
+use super::types::scheduling::Schedule;
+use super::types::tsn_types::BridgePortDelays;
+use super::{types::topology::Port, types::topology::Topology, Cnc};
 use std::{net::IpAddr, sync::Weak};
-
-use crate::cnc::{topology::Port, types::tsn_types::BridgePortDelays};
-
-use super::{middleware::Schedule, topology::Topology, Cnc};
 
 pub trait SouthboundControllerInterface {}
 pub trait SouthboundAdapterInterface {

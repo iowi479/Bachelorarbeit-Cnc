@@ -1,4 +1,4 @@
-use super::types::shed_types::ConfigurableGateParameterTableEntry;
+use super::types::sched_types::ConfigurableGateParameterTableEntry;
 use super::types::uni_types::{self, stream_request, Cuc, Stream, StreamStatus};
 use super::Cnc;
 use rand::Rng;
