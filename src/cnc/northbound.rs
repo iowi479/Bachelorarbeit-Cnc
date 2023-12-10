@@ -9,7 +9,7 @@ use super::types::uni_types::{
     request_domain_id, request_free_stream_id,
 };
 use super::Cnc;
-use std::sync::{RwLock, Weak};
+use std::sync::Weak;
 use std::thread;
 use std::time::Duration;
 
@@ -59,7 +59,7 @@ pub trait NorthboundAdapterInterface {
     /// ```
     /// self.cnc = Some(cnc);
     /// ```
-    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
+    fn set_cnc_ref(&mut self, cnc: Weak<Cnc>);
 }
 
 /// This Trait is implemented by the CNC and provides endpoints for the Northbound-Component to trigger actions in the CNC
@@ -92,13 +92,15 @@ pub trait NorthboundControllerInterface {
 }
 
 pub struct MockUniAdapter {
-    cnc: Option<Weak<RwLock<Cnc>>>, // ref to cnc
+    cnc: Weak<Cnc>, // ref to cnc
 }
 
 // Implementation specific stuff
 impl MockUniAdapter {
     pub fn new() -> Self {
-        Self { cnc: None }
+        Self {
+            cnc: Weak::default(),
+        }
     }
 
     pub fn get_example_add_stream() -> Vec<(GroupTalker, Vec<GroupListener>)> {
@@ -199,8 +201,8 @@ impl NorthboundAdapterInterface for MockUniAdapter {
         println!("[Northbound]-[MockUniAdapter] Notification: remove_streams_completed \n {notification:?}");
     }
 
-    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>) {
-        self.cnc = Some(cnc);
+    fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
+        self.cnc = cnc;
     }
 
     /// currently this does:
@@ -209,26 +211,22 @@ impl NorthboundAdapterInterface for MockUniAdapter {
     /// - remove stream ...00:00-01
     fn run(&self) {
         // ref to cnc for moving to second thread
-        let cnc = self.cnc.as_ref().unwrap().clone().upgrade().unwrap();
+        let cnc = self.cnc.upgrade().unwrap().clone();
 
         // TODO implement what this component does
         thread::spawn(move || loop {
+            println!("[Northbound] looping");
             thread::sleep(Duration::from_secs(2));
             // set stream-data
-            cnc.read()
-                .unwrap()
-                .set_streams(MockUniAdapter::get_example_add_stream());
+            cnc.set_streams(MockUniAdapter::get_example_add_stream());
 
             thread::sleep(Duration::from_secs(5));
             // start a scheduling run
             // TODO fill vector
-            cnc.read().unwrap().compute_all_streams(Vec::new());
+            cnc.compute_all_streams(Vec::new());
 
             thread::sleep(Duration::from_secs(5));
-            let res = cnc
-                .read()
-                .unwrap()
-                .remove_streams(vec![String::from("00-00-00-00-00-00:00-01")]);
+            let res = cnc.remove_streams(vec![String::from("00-00-00-00-00-00:00-01")]);
             println!("[Northbound] response to remove_streams {res}");
 
             thread::sleep(Duration::from_secs(5));

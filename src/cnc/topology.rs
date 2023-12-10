@@ -1,7 +1,7 @@
 use super::Cnc;
 use std::{
     net::{IpAddr, Ipv4Addr},
-    sync::{RwLock, Weak},
+    sync::Weak,
     thread,
     time::Duration,
 };
@@ -27,7 +27,7 @@ pub trait TopologyAdapterInterface {
     /// ```
     /// self.cnc = Some(cnc);
     /// ```
-    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
+    fn set_cnc_ref(&mut self, cnc: Weak<Cnc>);
 }
 
 pub enum NodeType {
@@ -57,7 +57,7 @@ pub struct Topology {
 
 pub struct MockTopology {
     topology: Topology,
-    cnc: Option<Weak<RwLock<Cnc>>>,
+    cnc: Weak<Cnc>,
 }
 
 impl MockTopology {
@@ -140,7 +140,7 @@ impl MockTopology {
 
         Self {
             topology,
-            cnc: None,
+            cnc: Weak::default(),
         }
     }
 }
@@ -159,16 +159,16 @@ impl TopologyAdapterInterface for MockTopology {
         &self.topology
     }
 
-    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>) {
-        self.cnc = Some(cnc);
+    fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
+        self.cnc = cnc;
     }
 
     fn run(&self) {
-        let cnc = self.cnc.as_ref().unwrap().upgrade().unwrap().clone();
+        let cnc = self.cnc.upgrade().unwrap().clone();
         thread::spawn(move || loop {
             thread::sleep(Duration::from_secs(10));
             println!("[Topology] Topology Changed");
-            cnc.read().unwrap().notify_topology_changed();
+            cnc.notify_topology_changed();
         });
     }
 }

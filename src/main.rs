@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use ba::cnc::{
     middleware::IPVSDsyncTSNScheduling, northbound::MockUniAdapter, southbound::NetconfAdapter,
     storage::FileStorage, topology::MockTopology, Cnc,
@@ -18,10 +20,10 @@ fn main() {
     Cnc::run(
         id,
         domain,
-        Box::new(northbound),
-        Box::new(southbound),
-        Box::new(storage),
-        Box::new(topology),
-        Box::new(scheduler),
+        Arc::new(northbound),
+        Arc::new(southbound),
+        Arc::new(storage),
+        Arc::new(topology),
+        Arc::new(scheduler),
     );
 }

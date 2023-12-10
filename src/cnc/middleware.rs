@@ -1,4 +1,4 @@
-use std::sync::{RwLock, Weak};
+use std::sync::Weak;
 
 use super::{topology::Topology, types::uni_types::Stream, Cnc};
 
@@ -16,17 +16,19 @@ pub trait SchedulerAdapterInterface {
     /// ```
     /// self.cnc = Some(cnc);
     /// ```
-    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>);
+    fn set_cnc_ref(&mut self, cnc: Weak<Cnc>);
 }
 
 pub struct IPVSDsyncTSNScheduling {
     // TODO impl sched-algo
-    cnc: Option<Weak<RwLock<Cnc>>>,
+    cnc: Weak<Cnc>,
 }
 
 impl IPVSDsyncTSNScheduling {
     pub fn new() -> Self {
-        Self { cnc: None }
+        Self {
+            cnc: Weak::default(),
+        }
     }
 }
 
@@ -37,7 +39,7 @@ impl SchedulerAdapterInterface for IPVSDsyncTSNScheduling {
         Schedule {}
     }
 
-    fn set_cnc_ref(&mut self, cnc: Weak<RwLock<Cnc>>) {
-        self.cnc = Some(cnc);
+    fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
+        self.cnc = cnc;
     }
 }

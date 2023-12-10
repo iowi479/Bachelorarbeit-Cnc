@@ -12,7 +12,7 @@ use self::storage::StorageAdapterInterface;
 use self::topology::{TopologyAdapterInterface, TopologyControllerInterface};
 use self::types::uni_types::{Domain, Stream};
 use std::sync::mpsc::{self, Receiver, Sender};
-use std::sync::{Arc, RwLock, Weak};
+use std::sync::{Arc, Weak};
 use std::thread;
 use std::time::Duration;
 
@@ -21,11 +21,11 @@ pub struct Cnc {
     domain: String,
     schedule_sender: Sender<ComputationType>,
 
-    northbound: Arc<RwLock<Box<dyn NorthboundAdapterInterface + Send + Sync>>>,
-    southbound: Arc<RwLock<Box<dyn SouthboundAdapterInterface + Send + Sync>>>,
-    storage: Arc<RwLock<Box<dyn StorageAdapterInterface + Send + Sync>>>,
-    topology: Arc<RwLock<Box<dyn TopologyAdapterInterface + Send + Sync>>>,
-    scheduler: Arc<RwLock<Box<dyn SchedulerAdapterInterface + Send + Sync>>>,
+    northbound: Arc<dyn NorthboundAdapterInterface + Send + Sync>,
+    southbound: Arc<dyn SouthboundAdapterInterface + Send + Sync>,
+    storage: Arc<dyn StorageAdapterInterface + Send + Sync>,
+    topology: Arc<dyn TopologyAdapterInterface + Send + Sync>,
+    scheduler: Arc<dyn SchedulerAdapterInterface + Send + Sync>,
 }
 
 enum ComputationType {
@@ -38,56 +38,66 @@ impl Cnc {
     pub fn run(
         id: u32,
         domain: String,
-        mut northbound: Box<dyn NorthboundAdapterInterface + Send + Sync>,
-        mut southbound: Box<dyn SouthboundAdapterInterface + Send + Sync>,
-        mut storage: Box<dyn StorageAdapterInterface + Send + Sync>,
-        mut topology: Box<dyn TopologyAdapterInterface + Send + Sync>,
-        mut scheduler: Box<dyn SchedulerAdapterInterface + Send + Sync>,
+        mut northbound: Arc<dyn NorthboundAdapterInterface + Send + Sync>,
+        mut southbound: Arc<dyn SouthboundAdapterInterface + Send + Sync>,
+        mut storage: Arc<dyn StorageAdapterInterface + Send + Sync>,
+        mut topology: Arc<dyn TopologyAdapterInterface + Send + Sync>,
+        mut scheduler: Arc<dyn SchedulerAdapterInterface + Send + Sync>,
     ) {
         // Channel for starting a computation
         // TODO create Enum for the operations
         let (start_schedule, rx): (Sender<ComputationType>, Receiver<ComputationType>) =
             mpsc::channel();
 
-        let cnc_ref: Arc<RwLock<Self>> = Arc::new_cyclic(|my_weak_ref: &Weak<RwLock<Self>>| {
+        let cnc: Arc<Self> = Arc::new_cyclic(|my_weak_ref: &Weak<Self>| {
             // configure all components
-            northbound.set_cnc_ref(my_weak_ref.clone());
-            southbound.set_cnc_ref(my_weak_ref.clone());
-            storage.set_cnc_ref(my_weak_ref.clone());
-            topology.set_cnc_ref(my_weak_ref.clone());
-            scheduler.set_cnc_ref(my_weak_ref.clone());
+            Arc::get_mut(&mut northbound)
+                .unwrap()
+                .set_cnc_ref(my_weak_ref.clone());
 
-            RwLock::new(Self {
+            Arc::get_mut(&mut southbound)
+                .unwrap()
+                .set_cnc_ref(my_weak_ref.clone());
+
+            Arc::get_mut(&mut storage)
+                .unwrap()
+                .set_cnc_ref(my_weak_ref.clone());
+
+            Arc::get_mut(&mut topology)
+                .unwrap()
+                .set_cnc_ref(my_weak_ref.clone());
+
+            Arc::get_mut(&mut scheduler)
+                .unwrap()
+                .set_cnc_ref(my_weak_ref.clone());
+
+            Self {
                 id,
                 domain,
                 schedule_sender: start_schedule,
-                northbound: Arc::new(RwLock::new(northbound)),
-                southbound: Arc::new(RwLock::new(southbound)),
-                storage: Arc::new(RwLock::new(storage)),
-                topology: Arc::new(RwLock::new(topology)),
-                scheduler: Arc::new(RwLock::new(scheduler)),
-            })
+                northbound,
+                southbound,
+                storage,
+                topology,
+                scheduler,
+            }
         });
         println!("[CNC] Successfully configured. Its now ready for use...");
 
         // configuration of all Components
-        let cnc = cnc_ref.read().unwrap();
-        cnc.northbound.read().unwrap().run();
-        cnc.topology.read().unwrap().run();
-        cnc.storage.write().unwrap().configure_storage();
-
-        // freeing aquired readlock
-        drop(cnc);
+        cnc.northbound.run();
+        cnc.topology.run();
+        cnc.storage.configure_storage();
 
         // wait for computation-requests
         for computation_type in rx {
-            Cnc::execute_computation(cnc_ref.clone(), computation_type);
+            Cnc::execute_computation(cnc.clone(), computation_type);
         }
 
         println!("[CNC] stopped...");
     }
 
-    fn execute_computation(cnc: Arc<RwLock<Cnc>>, computation_type: ComputationType) {
+    fn execute_computation(cnc: Arc<Cnc>, computation_type: ComputationType) {
         // for algorithm sorted by domain
         let _domains: Vec<Domain> = Vec::new();
         match computation_type {
@@ -104,34 +114,19 @@ impl Cnc {
 
         println!("[SCHEDULER]: computing...");
 
-        let scheduler_ref = cnc.read().unwrap().scheduler.clone();
+        let scheduler_ref = cnc.scheduler.clone();
         // TODO create flow
         // TODO This blocks... any other way?
-        let s = scheduler_ref.read().unwrap().compute_schedule(
-            cnc.read()
-                .unwrap()
-                .topology
-                .as_ref()
-                .read()
-                .unwrap()
-                .get_topology(),
-            Vec::new(),
-        );
+        let s = scheduler_ref.compute_schedule(cnc.topology.as_ref().get_topology(), Vec::new());
 
         thread::sleep(Duration::from_secs(4));
         println!("[SCHEDULER]: computation successfull {s:?}");
-        let nb_adapter_ref = cnc.read().unwrap().northbound.clone();
-        nb_adapter_ref
-            .read()
-            .unwrap()
-            .compute_streams_completed(Vec::new());
+        let nb_adapter_ref = cnc.northbound.clone();
+        nb_adapter_ref.compute_streams_completed(Vec::new());
 
         println!("[SCHEDULER]: configuring now...");
         thread::sleep(Duration::from_secs(4));
-        nb_adapter_ref
-            .read()
-            .unwrap()
-            .configure_streams_completed(Vec::new());
+        nb_adapter_ref.configure_streams_completed(Vec::new());
     }
 }
 
@@ -174,10 +169,7 @@ impl NorthboundControllerInterface for Cnc {
         input: types::uni_types::remove_streams::Input,
     ) -> types::uni_types::remove_streams::Output {
         for stream_id in input.iter() {
-            self.storage
-                .write()
-                .unwrap()
-                .remove_stream(stream_id.clone());
+            self.storage.remove_stream(stream_id.clone());
         }
         // TODO what gets returned?? -> Success?
         String::from("Success")
@@ -187,7 +179,7 @@ impl NorthboundControllerInterface for Cnc {
         &self,
         input: types::uni_types::request_domain_id::Input,
     ) -> types::uni_types::request_domain_id::Output {
-        return match self.storage.read().unwrap().get_domain_id_of_cuc(input) {
+        return match self.storage.get_domain_id_of_cuc(input) {
             None => String::from("Failure"),
             Some(domain_id) => domain_id,
         };
@@ -199,8 +191,6 @@ impl NorthboundControllerInterface for Cnc {
     ) -> types::uni_types::request_free_stream_id::Output {
         match self
             .storage
-            .read()
-            .unwrap()
             .get_free_stream_id(input.domain_id, input.cuc_id)
         {
             Some(id) => id,
@@ -246,7 +236,7 @@ impl NorthboundControllerInterface for Cnc {
             },
         };
 
-        self.storage.write().unwrap().set_stream(s);
+        self.storage.set_stream(s);
     }
 }
 
