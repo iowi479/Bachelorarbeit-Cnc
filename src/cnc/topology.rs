@@ -1,7 +1,7 @@
-use super::types::topology::{
-    Connection, ConnectionInterface, NodeInformation, NodeType, Path, Topology,
+use super::{
+    cnc::Cnc,
+    types::topology::{Connection, ConnectionInterface, NodeInformation, NodeType, Path, Topology},
 };
-use super::Cnc;
 use std::{
     net::{IpAddr, Ipv4Addr},
     sync::{RwLock, Weak},

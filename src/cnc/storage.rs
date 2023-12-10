@@ -1,6 +1,6 @@
+use super::cnc::Cnc;
 use super::types::sched_types::ConfigurableGateParameterTableEntry;
 use super::types::uni_types::{self, stream_request, Cuc, Stream, StreamStatus};
-use super::Cnc;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::fs::File;

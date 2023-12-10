@@ -1,9 +1,8 @@
-use std::sync::Arc;
-
 use ba::cnc::{
-    middleware::IPVSDsyncTSNScheduling, northbound::MockUniAdapter, southbound::NetconfAdapter,
-    storage::FileStorage, topology::MockTopology, Cnc,
+    cnc::Cnc, middleware::IPVSDsyncTSNScheduling, northbound::MockUniAdapter,
+    southbound::NetconfAdapter, storage::FileStorage, topology::MockTopology,
 };
+use std::sync::Arc;
 
 fn main() {
     // Create needed Components

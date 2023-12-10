@@ -1,6 +1,7 @@
 use std::sync::Weak;
 
 use super::{
+    cnc::Cnc,
     storage::{Config, PortConfiguration},
     types::{
         sched_types::{
@@ -10,7 +11,6 @@ use super::{
         topology::Topology,
         uni_types::Domain,
     },
-    Cnc,
 };
 
 pub trait SchedulerAdapterInterface {
