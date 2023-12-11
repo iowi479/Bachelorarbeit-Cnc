@@ -29,9 +29,8 @@ pub trait StorageAdapterInterface {
         domains: Vec<stream_request::Domain>,
     ) -> Vec<uni_types::Domain>;
 
-    fn remove_all_streams(&self);
-    fn remove_streams(&self, ids: Vec<String>);
-    fn remove_stream(&self, id: String);
+    fn remove_all_streams(&self, cuc_id: &String);
+    fn remove_stream(&self, cuc_id: &String, stream_id: String);
 
     fn set_stream(&self, stream: Stream);
     fn set_streams(&self, streams: Vec<Stream>);
@@ -72,7 +71,7 @@ pub struct FileStorage {
     domains: RwLock<Vec<uni_types::Domain>>,
 
     configs: RwLock<Vec<Config>>,
-    cnc: Weak<Cnc>, // ref to cnc
+    cnc: Weak<Cnc>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -224,34 +223,57 @@ impl StorageAdapterInterface for FileStorage {
         }
     }
 
-    fn remove_all_streams(&self) {
+    /// remove all streams from a given cuc in the local cnc.domain
+    fn remove_all_streams(&self, cuc_id: &String) {
         let mut domain_lock = self.domains.write().unwrap();
-        domain_lock[0].cuc[0].stream.clear();
+
+        let domain = domain_lock
+            .iter_mut()
+            .find(|d| d.domain_id == self.cnc.upgrade().unwrap().domain);
+
+        if domain.is_none() {
+            return;
+        }
+
+        let domain = domain.unwrap();
+        let cuc = domain.cuc.iter_mut().find(|c| &c.cuc_id == cuc_id);
+
+        if cuc.is_none() {
+            return;
+        }
+        let cuc = cuc.unwrap();
+
+        cuc.stream.clear();
         drop(domain_lock);
 
         self.save_domains();
     }
 
-    fn remove_stream(&self, id: String) {
+    /// remove a single stream by id from a given cuc in the local cnc.domain
+    fn remove_stream(&self, cuc_id: &String, stream_id: String) {
         let mut domain_lock = self.domains.write().unwrap();
-        let streams: &Vec<Stream> = &domain_lock[0].cuc[0].stream;
 
-        if let Some(index) = streams.iter().position(|s| s.stream_id == id) {
+        let domain = domain_lock
+            .iter_mut()
+            .find(|d| d.domain_id == self.cnc.upgrade().unwrap().domain);
+
+        if domain.is_none() {
+            return;
+        }
+
+        let domain = domain.unwrap();
+        let cuc = domain.cuc.iter_mut().find(|c| &c.cuc_id == cuc_id);
+
+        if cuc.is_none() {
+            return;
+        }
+        let cuc = cuc.unwrap();
+
+        if let Some(index) = cuc.stream.iter().position(|s| s.stream_id == stream_id) {
             domain_lock[0].cuc[0].stream.remove(index);
             drop(domain_lock);
 
             self.save_domains();
-        } else {
-            println!(
-                "[Storage] Tried to remove stream which doesnt exist: {}",
-                id
-            );
-        }
-    }
-
-    fn remove_streams(&self, ids: Vec<String>) {
-        for stream_id in ids {
-            self.remove_stream(stream_id);
         }
     }
 

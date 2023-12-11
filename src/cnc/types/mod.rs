@@ -47,6 +47,7 @@ pub mod topology {
         pub id: u32,
         pub ip: std::net::IpAddr,
         pub endstation: NodeType,
+        pub configuration_params: Option<(u32, String)>,
         pub ports: Vec<Port>,
     }
 

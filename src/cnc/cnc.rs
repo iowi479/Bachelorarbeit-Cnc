@@ -170,10 +170,11 @@ impl NorthboundControllerInterface for Cnc {
 
     fn remove_streams(
         &self,
+        cuc_id: &String,
         input: types::uni_types::remove_streams::Input,
     ) -> types::uni_types::remove_streams::Output {
         for stream_id in input.iter() {
-            self.storage.remove_stream(stream_id.clone());
+            self.storage.remove_stream(cuc_id, stream_id.clone());
         }
         // TODO what gets returned?? -> Success?
         String::from("Success")
@@ -205,6 +206,7 @@ impl NorthboundControllerInterface for Cnc {
     // TODO tuple als type definieren
     fn set_streams(
         &self,
+        cuc_id: &String,
         request: Vec<(
             types::tsn_types::GroupTalker,
             Vec<types::tsn_types::GroupListener>,
@@ -246,7 +248,6 @@ impl NorthboundControllerInterface for Cnc {
 
 impl TopologyControllerInterface for Cnc {
     fn notify_topology_changed(&self) {
-        // TODO behaviour of CNC on topologychange
-        println!("[CNC] TODO: got notified about TopologyChange. But doing nothing about it...");
+        // println!("[CNC] TODO: got notified about TopologyChange. But doing nothing about it...");
     }
 }

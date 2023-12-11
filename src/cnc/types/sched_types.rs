@@ -17,7 +17,7 @@ pub enum GateControlOperation {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct QueueMaxSduEntry {
-    traffic_class: u8, // TODO u8 type? supported traffic classes up to 8
+    traffic_class: u8,
     queue_max_sdu: u32,
     transmission_overrun: u64,
 }
@@ -30,8 +30,8 @@ pub type SchedParameters = Vec<GateParameterTableEntry>;
 pub struct GateParameterTableEntry {
     queue_max_sdu_table: Vec<QueueMaxSduEntry>,
     gate_enable: bool,
-    admin_gate_states: u8, // all 8 gates coded into bit representation
-    oper_gate_states: u8,  // all 8 gates coded into bit representation
+    admin_gate_states: u8,
+    oper_gate_states: u8,
     admin_control_list: Vec<GateControlEntry>,
     oper_control_list: Vec<GateControlEntry>,
     admin_cycle_time: RationalGrouping,
@@ -56,7 +56,7 @@ pub struct ConfigurableGateParameterTableEntry {
     // YANG -> The value must be retained across reinitializations of the management system.
     // queue_max_sdu_table: Vec<QueueMaxSduEntry>,
     pub gate_enable: bool,
-    pub admin_gate_states: u8, // all 8 gates coded into bit representation
+    pub admin_gate_states: u8,
     pub admin_control_list: Vec<GateControlEntry>,
     pub admin_cycle_time: RationalGrouping,
     pub admin_cycle_time_extension: u32,

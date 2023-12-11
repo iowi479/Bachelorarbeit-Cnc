@@ -68,6 +68,7 @@ impl MockTopology {
             ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
             endstation: NodeType::Bridge,
             ports: Vec::new(),
+            configuration_params: Some((830, String::from("admin"))),
         });
 
         nodes.push(NodeInformation {
@@ -75,6 +76,7 @@ impl MockTopology {
             ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 10)),
             endstation: NodeType::EndStation,
             ports: Vec::new(),
+            configuration_params: None,
         });
 
         nodes.push(NodeInformation {
@@ -82,6 +84,7 @@ impl MockTopology {
             ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 11)),
             endstation: NodeType::EndStation,
             ports: Vec::new(),
+            configuration_params: None,
         });
 
         connections.push(Connection {

@@ -6,14 +6,14 @@ use std::sync::Arc;
 
 fn main() {
     // Create needed Components
-    let northbound = MockUniAdapter::new();
+    let northbound = MockUniAdapter::new(String::from("test-cuc-id"));
     let southbound = NetconfAdapter::new();
     let storage = FileStorage::new();
     let topology = MockTopology::new();
     let scheduler = IPVSDsyncTSNScheduling::new();
 
     // Configuration for CNC
-    let id: u32 = 123;
+    let id: u32 = 0;
     let domain: String = String::from("test-domain-id");
 
     Cnc::run(

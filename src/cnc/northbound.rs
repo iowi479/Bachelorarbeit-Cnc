@@ -74,22 +74,28 @@ pub trait NorthboundControllerInterface {
     ) -> request_free_stream_id::Output;
 
     // action remove streams is not a rpc? is a action on the tsn-uni container (yang-tsn-config-uni row 182)
-    fn remove_streams(&self, input: remove_streams::Input) -> remove_streams::Output;
+    fn remove_streams(
+        &self,
+        cuc_id: &String,
+        input: remove_streams::Input,
+    ) -> remove_streams::Output;
 
     // TODO type touple... correct?
     // fn stream_request(&self, request: Vec<(GroupTalker, Vec<GroupListener>)>);
-    fn set_streams(&self, request: Vec<(GroupTalker, Vec<GroupListener>)>);
+    fn set_streams(&self, cuc_id: &String, request: Vec<(GroupTalker, Vec<GroupListener>)>);
 }
 
 pub struct MockUniAdapter {
-    cnc: Weak<Cnc>, // ref to cnc
+    cnc: Weak<Cnc>,
+    cuc_id: String,
 }
 
 // Implementation specific stuff
 impl MockUniAdapter {
-    pub fn new() -> Self {
+    pub fn new(cuc_id: String) -> Self {
         Self {
             cnc: Weak::default(),
+            cuc_id,
         }
     }
 
@@ -200,15 +206,15 @@ impl NorthboundAdapterInterface for MockUniAdapter {
     /// - compute call
     /// - remove stream ...00:00-01
     fn run(&self) {
-        // ref to cnc for moving to second thread
+        // these get moved to the new thread
         let cnc = self.cnc.upgrade().unwrap().clone();
+        let cuc_id = self.cuc_id.clone();
 
-        // TODO implement what this component does
         println!("[Northbound] running now...");
         thread::spawn(move || loop {
             thread::sleep(Duration::from_secs(2));
             // set stream-data
-            cnc.set_streams(MockUniAdapter::get_example_add_stream());
+            cnc.set_streams(&cuc_id, MockUniAdapter::get_example_add_stream());
 
             thread::sleep(Duration::from_secs(5));
 
@@ -223,7 +229,7 @@ impl NorthboundAdapterInterface for MockUniAdapter {
             cnc.compute_streams(ComputationType::All(domain));
 
             thread::sleep(Duration::from_secs(5));
-            let res = cnc.remove_streams(vec![String::from("00-00-00-00-00-00:00-01")]);
+            let res = cnc.remove_streams(&cuc_id, vec![String::from("00-00-00-00-00-00:00-01")]);
             println!("[Northbound] response to remove_streams {res}");
 
             thread::sleep(Duration::from_secs(5));
