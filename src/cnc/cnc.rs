@@ -11,26 +11,32 @@ use super::types::uni_types::{self, Stream};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Weak};
 
+pub type NorthboundRef = Arc<dyn NorthboundAdapterInterface + Send + Sync>;
+pub type SouthboundRef = Arc<dyn SouthboundAdapterInterface + Send + Sync>;
+pub type StorageRef = Arc<dyn StorageAdapterInterface + Send + Sync>;
+pub type TopologyRef = Arc<dyn TopologyAdapterInterface + Send + Sync>;
+pub type SchedulerRef = Arc<dyn SchedulerAdapterInterface + Send + Sync>;
+
 pub struct Cnc {
     pub id: u32,
     pub domain: String,
-    pub schedule_computation_sender: Sender<ComputationType>,
-    pub northbound: Arc<dyn NorthboundAdapterInterface + Send + Sync>,
-    pub southbound: Arc<dyn SouthboundAdapterInterface + Send + Sync>,
-    pub storage: Arc<dyn StorageAdapterInterface + Send + Sync>,
-    pub topology: Arc<dyn TopologyAdapterInterface + Send + Sync>,
-    pub scheduler: Arc<dyn SchedulerAdapterInterface + Send + Sync>,
+    schedule_computation_sender: Sender<ComputationType>,
+    northbound: NorthboundRef,
+    southbound: SouthboundRef,
+    storage: StorageRef,
+    topology: TopologyRef,
+    scheduler: SchedulerRef,
 }
 
 impl Cnc {
     pub fn run(
         id: u32,
         domain: String,
-        mut northbound: Arc<dyn NorthboundAdapterInterface + Send + Sync>,
-        mut southbound: Arc<dyn SouthboundAdapterInterface + Send + Sync>,
-        mut storage: Arc<dyn StorageAdapterInterface + Send + Sync>,
-        mut topology: Arc<dyn TopologyAdapterInterface + Send + Sync>,
-        mut scheduler: Arc<dyn SchedulerAdapterInterface + Send + Sync>,
+        mut northbound: NorthboundRef,
+        mut southbound: SouthboundRef,
+        mut storage: StorageRef,
+        mut topology: TopologyRef,
+        mut scheduler: SchedulerRef,
     ) {
         // Channel for starting a computation
         let (schedule_computation_sender, schedule_computation_receiver): (
@@ -206,7 +212,7 @@ impl NorthboundControllerInterface for Cnc {
     // TODO tuple als type definieren
     fn set_streams(
         &self,
-        cuc_id: &String,
+        _cuc_id: &String,
         request: Vec<(
             types::tsn_types::GroupTalker,
             Vec<types::tsn_types::GroupListener>,

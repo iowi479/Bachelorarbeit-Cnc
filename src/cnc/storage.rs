@@ -1,14 +1,11 @@
 use super::cnc::Cnc;
 use super::types::sched_types::ConfigurableGateParameterTableEntry;
-use super::types::uni_types::{self, stream_request, Cuc, Stream, StreamStatus};
+use super::types::uni_types::{self, stream_request, Stream, StreamStatus};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{Error, Read, Write};
 use std::sync::{RwLock, Weak};
-
-// TODO should probably be removed
-const DEFAULT_CUC_ID: &str = "test-cuc-id";
 
 /// Any StorageComponent that should be used with the CNC must implement this trait.
 pub trait StorageAdapterInterface {
@@ -193,17 +190,11 @@ impl StorageAdapterInterface for FileStorage {
             let cnc_domain: String = cnc.domain.clone();
             let mut domain_lock = self.domains.write().unwrap();
 
-            // generate Mockdata
+            // generate empty domain of cnc
             domain_lock.push(uni_types::Domain {
                 domain_id: cnc_domain,
                 cnc_enabled: true,
                 cuc: Vec::new(),
-            });
-
-            // TODO Maybe do this on receiving change?
-            domain_lock[0].cuc.push(Cuc {
-                cuc_id: DEFAULT_CUC_ID.to_string(),
-                stream: Vec::new(),
             });
 
             drop(domain_lock);
@@ -277,6 +268,7 @@ impl StorageAdapterInterface for FileStorage {
         }
     }
 
+    /// get streams of a single cuc in the domain
     fn get_streams_in_domain(&self, get_domain: stream_request::Domain) -> Vec<uni_types::Domain> {
         let domain_lock = self.domains.write().unwrap();
         let mut result: Vec<uni_types::Domain> = Vec::new();
