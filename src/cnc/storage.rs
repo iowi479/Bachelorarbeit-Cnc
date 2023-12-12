@@ -337,9 +337,11 @@ impl StorageAdapterInterface for FileStorage {
         self.cnc = cnc;
     }
 
+    /// returnes the whole config store. Maybe usefull for configuration on startup...
     fn get_all_configs(&self) -> Vec<Config> {
         let config_lock = self.configs.write().unwrap();
         let mut result: Vec<Config> = Vec::new();
+
         for config in config_lock.iter() {
             result.push(config.1.clone());
         }
@@ -348,30 +350,39 @@ impl StorageAdapterInterface for FileStorage {
         result
     }
 
+    /// returnes the requested config. If it is not present, this will return None
     fn get_config(&self, node_id: u32) -> Option<Config> {
         let config_lock = self.configs.write().unwrap();
-        for config in config_lock.iter() {
-            if *config.0 == node_id {
-                return Some(config.1.clone());
-            }
-        }
 
-        drop(config_lock);
-        None
+        let config = config_lock.get(&node_id);
+
+        return match config {
+            None => None,
+            Some(config) => Some(config.clone()),
+        };
     }
 
+    /// stores the provided config
     fn set_config(&self, config: Config) {
         let mut config_lock = self.configs.write().unwrap();
-        todo!();
+
+        config_lock.insert(config.node_id, config);
 
         drop(config_lock);
         self.save_configs();
     }
 
+    /// stores all provided configs
     fn set_configs(&self, configs: &Vec<Config>) {
+        let mut config_lock = self.configs.write().unwrap();
+
         for config in configs.iter() {
-            self.set_config(config.clone());
+            let config = config.clone();
+            config_lock.insert(config.node_id, config);
         }
+
+        drop(config_lock);
+        self.save_configs();
     }
 
     /// goes through all domains and retures all with all subsecuent cucs and all their streams
