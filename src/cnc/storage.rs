@@ -83,8 +83,7 @@ impl FileStorage {
     }
 
     fn save_domains(&self) {
-        let parsing_res: Result<String, serde_json::Error> = serde_json::to_string(&self.domains);
-        match parsing_res {
+        match serde_json::to_string(&self.domains) {
             Err(_) => panic!("[Storage] couldn't parse store to json..."),
             Ok(s) => {
                 let result: Result<(), Error> = Self::write_to_file(self.domains_path, s.clone());
@@ -102,8 +101,7 @@ impl FileStorage {
     }
 
     fn save_configs(&self) {
-        let parsing_res: Result<String, serde_json::Error> = serde_json::to_string(&self.configs);
-        match parsing_res {
+        match serde_json::to_string(&self.configs) {
             Err(_) => panic!("[Storage] couldn't parse store to json..."),
             Ok(s) => {
                 let result: Result<(), Error> = Self::write_to_file(self.configs_path, s.clone());
