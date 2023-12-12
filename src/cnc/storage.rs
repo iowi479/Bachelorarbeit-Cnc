@@ -347,8 +347,8 @@ impl StorageAdapterInterface for FileStorage {
         let config_lock = self.configs.write().unwrap();
         let mut result: Vec<Config> = Vec::new();
 
-        for config in config_lock.iter() {
-            result.push(config.1.clone());
+        for config in config_lock.values() {
+            result.push(config.clone());
         }
 
         drop(config_lock);
@@ -359,9 +359,7 @@ impl StorageAdapterInterface for FileStorage {
     fn get_config(&self, node_id: u32) -> Option<Config> {
         let config_lock = self.configs.write().unwrap();
 
-        let config = config_lock.get(&node_id);
-
-        return match config {
+        return match config_lock.get(&node_id) {
             None => None,
             Some(config) => Some(config.clone()),
         };
