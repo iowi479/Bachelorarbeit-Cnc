@@ -39,14 +39,12 @@ pub struct Talker {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Listener {
-    // evtl nicht als struct und fields...
     pub index: u32,
     pub group_listener: tsn_types::GroupListener,
     pub group_status_talker_listener: tsn_types::GroupStatusTalkerListener,
 }
 
 pub mod stream_request {
-    // rpc compute_streams
     pub type Input = Vec<Domain>;
 
     pub struct Domain {
@@ -63,13 +61,11 @@ pub mod stream_request {
 }
 
 pub mod request_domain_id {
-    // rpc request_domain_id
     pub type Input = String;
     pub type Output = String;
 }
 
 pub mod request_free_stream_id {
-    // rpc request_free_stream_id
     pub struct Input {
         pub domain_id: String,
         pub cuc_id: String,

@@ -1,4 +1,4 @@
-use std::sync::Weak;
+use std::{sync::Weak, thread, time::Duration};
 
 use super::{
     cnc::Cnc,
@@ -39,19 +39,13 @@ impl IPVSDsyncTSNScheduling {
 
     pub fn compute(&self, _topology: &Topology, _domains: &Vec<Domain>) -> Vec<(u32, u32)> {
         // TODO call Algorithm
+        thread::sleep(Duration::from_secs(10));
+
         return vec![(1, 1000)];
     }
-}
 
-impl SchedulerAdapterInterface for IPVSDsyncTSNScheduling {
-    fn compute_schedule(&self, topology: &Topology, domains: &Vec<Domain>) -> Schedule {
-        // TODO call sched-algo
-        // todo!("compute schedule");
-
+    pub fn parse_to_schedule(&self, starts: Vec<(u32, u32)>) -> Schedule {
         let mut configs: Vec<Config> = Vec::new();
-
-        let starts = self.compute(topology, domains);
-
         let mut ports: Vec<PortConfiguration> = Vec::new();
 
         ports.push(PortConfiguration {
@@ -91,6 +85,17 @@ impl SchedulerAdapterInterface for IPVSDsyncTSNScheduling {
         configs.push(Config { node_id: 1, ports });
 
         return Schedule { configs };
+    }
+}
+
+impl SchedulerAdapterInterface for IPVSDsyncTSNScheduling {
+    fn compute_schedule(&self, topology: &Topology, domains: &Vec<Domain>) -> Schedule {
+        // TODO call sched-algo
+        // todo!("compute schedule");
+
+        let starts = self.compute(topology, domains);
+
+        return self.parse_to_schedule(starts);
     }
 
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {

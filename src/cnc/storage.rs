@@ -1,8 +1,9 @@
-use super::cnc::Cnc;
+use super::cnc::{Cnc, CNC_NOT_PRESENT};
 use super::types::sched_types::ConfigurableGateParameterTableEntry;
 use super::types::uni_types::{self, stream_request, Stream, StreamStatus};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Error, Read, Write};
 use std::sync::{RwLock, Weak};
@@ -13,14 +14,11 @@ pub trait StorageAdapterInterface {
     /// This should fully setup everything the Storage-Component needs. After this is called, it has to be ready to operate.
     fn configure_storage(&self);
 
-    // TODO get streams refactor for needing domain and cuc id
-    fn get_all_streams(&self) -> Vec<Stream>;
     fn get_streams_in_domains(
         &self,
         domains: Vec<stream_request::Domain>,
     ) -> Vec<uni_types::Domain>;
     fn get_streams_in_domain(&self, domain: stream_request::Domain) -> Vec<uni_types::Domain>;
-    fn get_stream(&self, id: String) -> Option<Stream>;
     fn get_planned_and_modified_streams_in_domains(
         &self,
         domains: Vec<stream_request::Domain>,
@@ -67,7 +65,7 @@ pub struct FileStorage {
 
     domains: RwLock<Vec<uni_types::Domain>>,
 
-    configs: RwLock<Vec<Config>>,
+    configs: RwLock<HashMap<u32, Config>>,
     cnc: Weak<Cnc>,
 }
 
@@ -89,7 +87,7 @@ impl FileStorage {
             domains_path: "domain_storage.json",
             configs_path: "config_storage.json",
             domains: RwLock::new(Vec::new()),
-            configs: RwLock::new(Vec::new()),
+            configs: RwLock::new(HashMap::new()),
             cnc: Weak::default(),
         }
     }
@@ -164,7 +162,7 @@ impl FileStorage {
 
     fn try_load_configs(&self) -> Result<(), Error> {
         let content: String = Self::read_from_file(self.configs_path)?;
-        let configs: Vec<Config> = serde_json::from_str::<Vec<Config>>(&content)?;
+        let configs: HashMap<u32, Config> = serde_json::from_str::<HashMap<u32, Config>>(&content)?;
         let mut config_lock = self.configs.write().unwrap();
         *config_lock = configs;
         drop(config_lock);
@@ -207,7 +205,7 @@ impl StorageAdapterInterface for FileStorage {
         if could_load_configs.is_err() {
             // no configurations could be loaded
             let mut configs_lock = self.configs.write().unwrap();
-            *configs_lock = Vec::new();
+            *configs_lock = HashMap::new();
             drop(configs_lock);
 
             self.save_configs();
@@ -217,27 +215,22 @@ impl StorageAdapterInterface for FileStorage {
     /// remove all streams from a given cuc in the local cnc.domain
     fn remove_all_streams(&self, cuc_id: &String) {
         let mut domain_lock = self.domains.write().unwrap();
+        let cnc_domain_name = &self.cnc.upgrade().expect(CNC_NOT_PRESENT).domain;
 
         let domain = domain_lock
             .iter_mut()
-            .find(|d| d.domain_id == self.cnc.upgrade().unwrap().domain);
+            .find(|d| d.domain_id == *cnc_domain_name);
 
-        if domain.is_none() {
-            return;
+        if let Some(domain) = domain {
+            let cuc = domain.cuc.iter_mut().find(|c| &c.cuc_id == cuc_id);
+
+            if let Some(cuc) = cuc {
+                cuc.stream.clear();
+                drop(domain_lock);
+
+                self.save_domains();
+            }
         }
-
-        let domain = domain.unwrap();
-        let cuc = domain.cuc.iter_mut().find(|c| &c.cuc_id == cuc_id);
-
-        if cuc.is_none() {
-            return;
-        }
-        let cuc = cuc.unwrap();
-
-        cuc.stream.clear();
-        drop(domain_lock);
-
-        self.save_domains();
     }
 
     /// remove a single stream by id from a given cuc in the local cnc.domain
@@ -294,29 +287,6 @@ impl StorageAdapterInterface for FileStorage {
         return result;
     }
 
-    fn get_all_streams(&self) -> Vec<Stream> {
-        let mut result: Vec<Stream> = Vec::new();
-        let domain_lock = self.domains.write().unwrap();
-        for stream in &domain_lock[0].cuc[0].stream {
-            result.push(stream.clone());
-        }
-
-        drop(domain_lock);
-        result
-    }
-
-    fn get_stream(&self, id: String) -> Option<Stream> {
-        let domain_lock = self.domains.write().unwrap();
-        for stream in domain_lock[0].cuc[0].stream.iter() {
-            if stream.stream_id == id {
-                return Some(stream.clone());
-            }
-        }
-
-        drop(domain_lock);
-        return None;
-    }
-
     fn set_stream(&self, stream: Stream) {
         let mut domain_lock = self.domains.write().unwrap();
         let streams: &Vec<Stream> = &domain_lock[0].cuc[0].stream;
@@ -371,7 +341,7 @@ impl StorageAdapterInterface for FileStorage {
         let config_lock = self.configs.write().unwrap();
         let mut result: Vec<Config> = Vec::new();
         for config in config_lock.iter() {
-            result.push(config.clone());
+            result.push(config.1.clone());
         }
 
         drop(config_lock);
@@ -381,8 +351,8 @@ impl StorageAdapterInterface for FileStorage {
     fn get_config(&self, node_id: u32) -> Option<Config> {
         let config_lock = self.configs.write().unwrap();
         for config in config_lock.iter() {
-            if config.node_id == node_id {
-                return Some(config.clone());
+            if *config.0 == node_id {
+                return Some(config.1.clone());
             }
         }
 
@@ -392,16 +362,7 @@ impl StorageAdapterInterface for FileStorage {
 
     fn set_config(&self, config: Config) {
         let mut config_lock = self.configs.write().unwrap();
-        for i in 0..config_lock.len() {
-            if config_lock[i].node_id == config.node_id {
-                config_lock[i] = config;
-                self.save_configs();
-                return;
-            }
-        }
-
-        // id not yet present
-        config_lock.push(config);
+        todo!();
 
         drop(config_lock);
         self.save_configs();

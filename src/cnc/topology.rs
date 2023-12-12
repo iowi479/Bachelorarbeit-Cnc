@@ -1,5 +1,5 @@
 use super::{
-    cnc::Cnc,
+    cnc::{Cnc, CNC_NOT_PRESENT},
     types::topology::{Connection, ConnectionInterface, NodeInformation, NodeType, Path, Topology},
 };
 use std::{
@@ -149,7 +149,8 @@ impl TopologyAdapterInterface for MockTopology {
     }
 
     fn run(&self) {
-        let cnc = self.cnc.upgrade().unwrap().clone();
+        let cnc = self.cnc.upgrade().expect(CNC_NOT_PRESENT).clone();
+
         thread::spawn(move || loop {
             thread::sleep(Duration::from_secs(10));
             cnc.notify_topology_changed();

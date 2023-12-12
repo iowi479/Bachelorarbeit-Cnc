@@ -11,6 +11,8 @@ use super::types::uni_types::{self, Stream};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Weak};
 
+pub static CNC_NOT_PRESENT: &str = "CNC is not present exiting...";
+
 pub type NorthboundRef = Arc<dyn NorthboundAdapterInterface + Send + Sync>;
 pub type SouthboundRef = Arc<dyn SouthboundAdapterInterface + Send + Sync>;
 pub type StorageRef = Arc<dyn StorageAdapterInterface + Send + Sync>;

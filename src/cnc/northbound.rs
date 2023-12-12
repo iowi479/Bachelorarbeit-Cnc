@@ -1,3 +1,5 @@
+use crate::cnc::cnc::CNC_NOT_PRESENT;
+
 use super::cnc::Cnc;
 use super::types::computation::ComputationType;
 use super::types::notification_types::NotificationContent;
@@ -207,7 +209,7 @@ impl NorthboundAdapterInterface for MockUniAdapter {
     /// - remove stream ...00:00-01
     fn run(&self) {
         // these get moved to the new thread
-        let cnc = self.cnc.upgrade().unwrap().clone();
+        let cnc = self.cnc.upgrade().expect(CNC_NOT_PRESENT).clone();
         let cuc_id = self.cuc_id.clone();
 
         println!("[Northbound] running now...");
