@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// The Stream ID is a string that represents two fields:
 ///
-/// MAC Address:
+/// # MAC Address:
 ///
 /// A 48-bit IEEE 802 MAC address associated with the Talker sourcing
 /// the Stream to the bridged network. The entire range of MAC
@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 /// unique within the network, duplicate Stream IDs can be generated,
 /// with unpredictable results.
 ///
-/// Unique ID:
+/// # Unique ID:
 ///
 /// A 16-bit unique ID that is used to distinguish between multiple
 /// Streams within the station identified by MAC Address.
@@ -41,6 +41,7 @@ use serde::{Deserialize, Serialize};
 /// for a key to a list of Stream configurations (using group-talker
 /// and group-listener) and a list of Stream status (using
 /// group-status-stream and group-status-talker-listener).
+///
 /// # Pattern
 ///     "[0-9A-F]{2}"+
 ///     "(-[0-9A-F]{2}){5}"+
@@ -107,6 +108,7 @@ pub struct GroupInterfaceCapabilities {
     pub cb_sequence_type_list: Vec<u32>,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
 pub enum ConfigValue {
     Ieee802MacAddresses(GroupIeee802MacAddress),
     Ieee802VlanTag(GroupIeee802VlanTag),
@@ -114,23 +116,21 @@ pub enum ConfigValue {
     Ipv6Tuple(GroupIpv6Tuple),
     TimeAwareOffset(u32),
 }
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ConfigListElement {
     pub index: u8,
     pub config_value: ConfigValue,
 }
+#[derive(Serialize, Deserialize, Clone)]
 pub struct InterfaceListElement {
     pub config_list: Vec<ConfigListElement>,
-    // uses GroupInterfaceId
-    // oder: (aber nicht genau nach standard)
-    // group_interface_id: GroupInterfaceId
     pub mac_address: String,
     pub interface_name: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct GroupInterfaceConfiguration {
-    // interface_list: Vec,
-    // TODO is needed?
+    pub interface_list: Vec<InterfaceListElement>,
 }
 
 // Need for fully centralized model
@@ -234,7 +234,7 @@ pub struct GroupStatusTalkerListener {
     pub interface_configuration: GroupInterfaceConfiguration,
 }
 
-// only viable for specific b&r switch since its not in the official IEEE Standard (yet)
+/// This packet is only viable for the specific b&r switch used in this paper. Since this Object is not (yet) in the official IEEE Standard.
 #[derive(Serialize, Deserialize, Clone)]
 pub struct BridgePortDelays {
     pub port_speed: u32,

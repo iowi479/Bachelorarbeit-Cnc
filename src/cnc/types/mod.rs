@@ -73,10 +73,22 @@ pub mod topology {
 }
 
 pub mod scheduling {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Serialize, Deserialize, Clone)]
+    pub struct Config {
+        pub node_id: u32,
+        pub ports: Vec<PortConfiguration>,
+    }
+
+    #[derive(Serialize, Deserialize, Clone)]
+    pub struct PortConfiguration {
+        pub name: String,
+        pub config: super::sched_types::ConfigurableGateParameterTableEntry,
+    }
 
     pub struct Schedule {
-        pub configs: Vec<crate::cnc::storage::Config>,
-        // TODO impl computed Schedule
+        pub configs: Vec<Config>,
     }
 }
 

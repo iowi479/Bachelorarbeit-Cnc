@@ -10,7 +10,7 @@ use std::{
 };
 
 pub trait TopologyControllerInterface {
-    fn notify_topology_changed(&self) {}
+    fn notify_topology_changed(&self);
 }
 
 pub trait TopologyAdapterInterface {

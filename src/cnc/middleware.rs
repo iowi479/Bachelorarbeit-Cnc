@@ -1,17 +1,15 @@
-use std::{sync::Weak, thread, time::Duration};
-
 use super::{
     cnc::Cnc,
-    storage::{Config, PortConfiguration},
     types::{
         sched_types::{
             ConfigurableGateParameterTableEntry, GateControlEntry, GateControlOperation,
         },
-        scheduling::Schedule,
+        scheduling::{Config, PortConfiguration, Schedule},
         topology::Topology,
         uni_types::Domain,
     },
 };
+use std::{sync::Weak, thread, time::Duration};
 
 pub trait SchedulerAdapterInterface {
     // TODO streams sorted by domain?

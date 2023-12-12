@@ -1,8 +1,7 @@
 use super::cnc::{Cnc, CNC_NOT_PRESENT};
-use super::types::sched_types::ConfigurableGateParameterTableEntry;
+use super::types::scheduling::Config;
 use super::types::uni_types::{self, stream_request, Stream, StreamStatus};
 use rand::Rng;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Error, Read, Write};
@@ -27,8 +26,10 @@ pub trait StorageAdapterInterface {
     fn remove_all_streams(&self, cuc_id: &String);
     fn remove_stream(&self, cuc_id: &String, stream_id: String);
 
-    fn set_stream(&self, stream: Stream);
-    fn set_streams(&self, streams: Vec<Stream>);
+    fn set_stream(&self, cuc_id: &String, stream: &Stream);
+    fn set_streams(&self, cuc_id: &String, streams: &Vec<Stream>);
+
+    /// This gets called after the configuration of the requested Streams was successfull.
     fn set_streams_configured(&self, domains: &Vec<uni_types::Domain>);
 
     /// Returns the domain of the requesting CUC
@@ -40,6 +41,7 @@ pub trait StorageAdapterInterface {
 
     fn set_config(&self, config: Config);
     fn set_configs(&self, configs: &Vec<Config>);
+
     /// In the fully centralized model, this should not be used.
     /// The CUC should take care of that because it nows the MAC-Addresses of its listeners.
     /// This implementation returns a free id but with MAC-Address 0
@@ -67,18 +69,6 @@ pub struct FileStorage {
 
     configs: RwLock<HashMap<u32, Config>>,
     cnc: Weak<Cnc>,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct Config {
-    pub node_id: u32,
-    pub ports: Vec<PortConfiguration>,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-pub struct PortConfiguration {
-    pub name: String,
-    pub config: ConfigurableGateParameterTableEntry,
 }
 
 impl FileStorage {
@@ -184,7 +174,7 @@ impl StorageAdapterInterface for FileStorage {
         let could_load_domains = self.try_load_domains();
 
         if could_load_domains.is_err() {
-            let cnc = self.cnc.upgrade().unwrap();
+            let cnc = self.cnc.upgrade().expect(CNC_NOT_PRESENT);
             let cnc_domain: String = cnc.domain.clone();
             let mut domain_lock = self.domains.write().unwrap();
 
@@ -287,23 +277,40 @@ impl StorageAdapterInterface for FileStorage {
         return result;
     }
 
-    fn set_stream(&self, stream: Stream) {
+    /// if the provided stream is already present, it will get replaced. Otherwise it will be added to the streamlist of the provided cuc
+    fn set_stream(&self, cuc_id: &String, stream: &Stream) {
         let mut domain_lock = self.domains.write().unwrap();
-        let streams: &Vec<Stream> = &domain_lock[0].cuc[0].stream;
+        let cnc_domain_name = &self.cnc.upgrade().expect(CNC_NOT_PRESENT).domain;
 
-        if let Some(index) = streams.iter().position(|s| s.stream_id == stream.stream_id) {
-            domain_lock[0].cuc[0].stream[index] = stream;
-        } else {
-            domain_lock[0].cuc[0].stream.push(stream);
+        let domain = domain_lock
+            .iter_mut()
+            .find(|d| d.domain_id == *cnc_domain_name);
+
+        if let Some(domain) = domain {
+            let cuc = domain.cuc.iter_mut().find(|c| c.cuc_id == *cuc_id);
+
+            if let Some(cuc) = cuc {
+                let found_stream = cuc
+                    .stream
+                    .iter_mut()
+                    .find(|s| s.stream_id == stream.stream_id);
+
+                if let Some(s) = found_stream {
+                    *s = stream.clone();
+                } else {
+                    cuc.stream.push(stream.clone());
+                }
+            }
         }
 
         drop(domain_lock);
         self.save_domains();
     }
 
-    fn set_streams(&self, mut streams: Vec<Stream>) {
-        while let Some(stream) = streams.pop() {
-            self.set_stream(stream);
+    /// calls self.set_stream(...) for every provided stream. This is not really efficient...
+    fn set_streams(&self, cuc_id: &String, streams: &Vec<Stream>) {
+        for s in streams {
+            self.set_stream(cuc_id, s);
         }
     }
 

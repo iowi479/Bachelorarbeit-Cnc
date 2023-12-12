@@ -214,13 +214,14 @@ impl NorthboundControllerInterface for Cnc {
     // TODO tuple als type definieren
     fn set_streams(
         &self,
-        _cuc_id: &String,
+        cuc_id: &String,
         request: Vec<(
             types::tsn_types::GroupTalker,
             Vec<types::tsn_types::GroupListener>,
         )>,
     ) {
         // TODO parse request and add to storage
+        // TODO status groups and normal groups. When does everthig get created
 
         let s: Stream = Stream {
             stream_id: String::from("00-00-00-00-00-00:00-01"),
@@ -229,7 +230,21 @@ impl NorthboundControllerInterface for Cnc {
                 group_talker: request[0].0.clone(),
                 group_status_talker_listener: types::tsn_types::GroupStatusTalkerListener {
                     accumulated_latency: 0,
-                    interface_configuration: types::tsn_types::GroupInterfaceConfiguration {},
+                    interface_configuration: types::tsn_types::GroupInterfaceConfiguration {
+                        interface_list: vec![types::tsn_types::InterfaceListElement {
+                            config_list: vec![types::tsn_types::ConfigListElement {
+                                index: 0,
+                                config_value: types::tsn_types::ConfigValue::Ieee802MacAddresses(
+                                    types::tsn_types::GroupIeee802MacAddress {
+                                        destination_mac_adress: String::from("00-00-00-0F-00-00"),
+                                        source_mac_adress: String::from("00-00-00-00-00-01"),
+                                    },
+                                ),
+                            }],
+                            interface_name: String::new(),
+                            mac_address: String::new(),
+                        }],
+                    },
                 },
             },
             listener: vec![types::uni_types::Listener {
@@ -237,7 +252,9 @@ impl NorthboundControllerInterface for Cnc {
                 group_listener: request[0].1[0].clone(),
                 group_status_talker_listener: types::tsn_types::GroupStatusTalkerListener {
                     accumulated_latency: 0,
-                    interface_configuration: types::tsn_types::GroupInterfaceConfiguration {},
+                    interface_configuration: types::tsn_types::GroupInterfaceConfiguration {
+                        interface_list: Vec::new(),
+                    },
                 },
             }],
             group_status_stream: types::tsn_types::GroupStatusStream {
@@ -250,7 +267,7 @@ impl NorthboundControllerInterface for Cnc {
             },
         };
 
-        self.storage.set_stream(s);
+        self.storage.set_stream(cuc_id, &s);
     }
 }
 
