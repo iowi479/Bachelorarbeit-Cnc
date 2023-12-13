@@ -4,8 +4,8 @@ use super::cnc::Cnc;
 use super::types::computation::ComputationType;
 use super::types::notification_types::NotificationContent;
 use super::types::tsn_types::{
-    DataFrameSpecificationElement, DataFrameSpecificationElementType, EndStationInterface,
-    GroupIeee802VlanTag, GroupInterfaceCapabilities, GroupInterfaceId, GroupListener, GroupTalker,
+    DataFrameSpecificationElement, DataFrameSpecificationElementType, GroupIeee802VlanTag,
+    GroupInterfaceCapabilities, GroupInterfaceId, GroupListener, GroupTalker,
     GroupUserToNetworkRequirements, StreamRankContainer, TrafficSpecificationContainer,
 };
 use super::types::uni_types::{
@@ -107,12 +107,9 @@ impl MockUniAdapter {
         // 1
         let talker: GroupTalker = GroupTalker {
             stream_rank: StreamRankContainer { rank: 1 },
-            end_station_interfaces: vec![EndStationInterface {
-                index: 0,
-                interface_id: GroupInterfaceId {
-                    interface_name: "".to_string(),
-                    mac_address: "00-00-00-00-00-01".to_string(),
-                },
+            end_station_interfaces: vec![GroupInterfaceId {
+                interface_name: "".to_string(),
+                mac_address: "00-00-00-00-00-01".to_string(),
             }],
             data_frame_specification: vec![
                 DataFrameSpecificationElement {
@@ -160,12 +157,9 @@ impl MockUniAdapter {
 
         let listener: Vec<GroupListener> = vec![GroupListener {
             index: 0, // TODO stream_id??? and index???
-            end_station_interfaces: vec![EndStationInterface {
-                index: 0,
-                interface_id: GroupInterfaceId {
-                    mac_address: "00-00-00-0F-00-00".to_string(),
-                    interface_name: "".to_string(),
-                },
+            end_station_interfaces: vec![GroupInterfaceId {
+                mac_address: "00-00-00-0F-00-00".to_string(),
+                interface_name: "".to_string(),
             }],
             user_to_network_requirements: GroupUserToNetworkRequirements {
                 num_seemless_trees: 1,

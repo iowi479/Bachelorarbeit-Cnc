@@ -7,6 +7,7 @@ use super::types;
 use super::types::computation::ComputationType;
 use super::types::notification_types::{self, NotificationContent};
 use super::types::topology::Topology;
+use super::types::tsn_types::GroupInterfaceId;
 use super::types::uni_types::{self, Stream};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Weak};
@@ -241,8 +242,10 @@ impl NorthboundControllerInterface for Cnc {
                                     },
                                 ),
                             }],
-                            interface_name: String::new(),
-                            mac_address: String::new(),
+                            group_interface_id: GroupInterfaceId {
+                                interface_name: String::new(),
+                                mac_address: String::new(),
+                            },
                         }],
                     },
                 },

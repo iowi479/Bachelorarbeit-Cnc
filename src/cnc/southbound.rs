@@ -1,7 +1,10 @@
 use super::cnc::Cnc;
-use super::types::scheduling::Schedule;
+use super::types::scheduling::{Config, Schedule};
+use super::types::topology::NodeInformation;
 use super::types::tsn_types::BridgePortDelays;
 use super::{types::topology::Port, types::topology::Topology};
+
+use netconf_client::errors::NetconfClientError;
 use std::{net::IpAddr, sync::Weak};
 
 pub trait SouthboundControllerInterface {}
@@ -27,6 +30,37 @@ impl NetconfAdapter {
             cnc: Weak::default(),
         }
     }
+
+    fn configure_node(
+        &self,
+        node: &NodeInformation,
+        config: &Config,
+    ) -> Result<(), NetconfClientError> {
+        println!("[Soutgbound] <edit-config> on {}", node.id);
+
+        for port_config in &config.ports {
+            println!("\tport: {}", port_config.name);
+        }
+
+        Ok(())
+    }
+
+    pub fn get_bridge_delay_filter(name: Option<&str>) -> String {
+        // TODO fix filter
+        let filter = "<interfaces>
+            <interface>
+                <name>xxxxxxxxxx</name>
+                <bridge-port>
+                </bridge-port>
+            </interface>
+        </interfaces>";
+
+        if let Some(name) = name {
+            return filter.replace("xxxxxxxxxx", name);
+        } else {
+            return filter.replace("xxxxxxxxxx", "");
+        }
+    }
 }
 
 impl SouthboundAdapterInterface for NetconfAdapter {
@@ -34,14 +68,10 @@ impl SouthboundAdapterInterface for NetconfAdapter {
         let mut configured_nodes: Vec<IpAddr> = Vec::new();
         for config in schedule.configs.iter() {
             if let Some(node) = topology.get_node(config.node_id) {
-                println!("[Southbound] <edit-config> on {}", node.ip);
-                for port_config in config.ports.iter() {
-                    // TODO impl netconf
-                    println!("\t port: {} ", port_config.name);
+                let config_result = self.configure_node(&node, config);
 
-                    if true {
-                        configured_nodes.push(node.ip);
-                    }
+                if config_result.is_ok() {
+                    configured_nodes.push(node.ip);
                 }
             }
         }
