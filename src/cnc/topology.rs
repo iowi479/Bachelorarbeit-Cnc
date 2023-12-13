@@ -1,6 +1,6 @@
-use super::{
-    cnc::{Cnc, CNC_NOT_PRESENT},
-    types::topology::{Connection, ConnectionInterface, NodeInformation, NodeType, Path, Topology},
+use super::cnc::{Cnc, CNC_NOT_PRESENT};
+use super::types::topology::{
+    Connection, ConnectionInterface, NodeInformation, NodeType, Path, Topology,
 };
 use std::{
     net::{IpAddr, Ipv4Addr},

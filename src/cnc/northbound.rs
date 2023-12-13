@@ -1,6 +1,4 @@
-use crate::cnc::cnc::CNC_NOT_PRESENT;
-
-use super::cnc::Cnc;
+use super::cnc::{Cnc, CNC_NOT_PRESENT};
 use super::types::computation::ComputationType;
 use super::types::notification_types::NotificationContent;
 use super::types::tsn_types::{

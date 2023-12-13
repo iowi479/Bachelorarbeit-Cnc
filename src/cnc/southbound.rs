@@ -1,9 +1,7 @@
 use super::cnc::Cnc;
 use super::types::scheduling::{Config, Schedule};
-use super::types::topology::NodeInformation;
+use super::types::topology::{NodeInformation, Port, Topology};
 use super::types::tsn_types::BridgePortDelays;
-use super::{types::topology::Port, types::topology::Topology};
-
 use netconf_client::errors::NetconfClientError;
 use std::{net::IpAddr, sync::Weak};
 
