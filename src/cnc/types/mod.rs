@@ -10,6 +10,15 @@ pub mod notification_types;
 /// Rust-Types for YANG-Models
 ///
 /// https://github.com/YangModels/yang/blob/main/standard/ieee/draft/802.1/Qcw/ieee802-dot1q-sched.yang
+///
+/// # Description
+/// This module provides for management of IEEE Std 802.1Q Bridges that
+/// support Scheduled Traffic Enhancements.
+///
+/// Copyright (C) IEEE (2023).
+///
+/// This version of this YANG module is part of IEEE Std 802.1Q; see the
+/// standard itself for full legal notices.
 pub mod sched_types;
 
 /// Rust-Types for YANG-Models
