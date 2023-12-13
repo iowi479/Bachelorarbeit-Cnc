@@ -9,7 +9,7 @@ use super::types::tsn_types::{
     GroupUserToNetworkRequirements, StreamRankContainer, TrafficSpecificationContainer,
 };
 use super::types::uni_types::{
-    remove_streams, request_domain_id, request_free_stream_id, stream_request,
+    compute_streams, remove_streams, request_domain_id, request_free_stream_id,
 };
 use std::sync::Weak;
 use std::time::Duration;
@@ -66,7 +66,7 @@ pub trait NorthboundAdapterInterface {
 
 /// This Trait is implemented by the CNC and provides endpoints for the Northbound-Component to trigger actions in the CNC
 pub trait NorthboundControllerInterface {
-    fn compute_streams(&self, computation: ComputationType) -> stream_request::Output;
+    fn compute_streams(&self, computation: ComputationType) -> compute_streams::Output;
 
     fn request_domain_id(&self, input: request_domain_id::Input) -> request_domain_id::Output;
 
@@ -215,9 +215,9 @@ impl NorthboundAdapterInterface for MockUniAdapter {
             thread::sleep(Duration::from_secs(5));
 
             // start a scheduling run
-            let domain: Vec<stream_request::Domain> = vec![stream_request::Domain {
+            let domain: Vec<compute_streams::Domain> = vec![compute_streams::Domain {
                 domain_id: String::from("test-domain-id"),
-                cuc: vec![stream_request::CucElement {
+                cuc: vec![compute_streams::CucElement {
                     cuc_id: String::from("test-cuc-id"),
                     stream_list: None,
                 }],

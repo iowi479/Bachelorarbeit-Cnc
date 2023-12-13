@@ -15,11 +15,25 @@ pub mod sched_types;
 /// Rust-Types for YANG-Models
 ///
 /// https://github.com/YangModels/yang/blob/main/standard/ieee/draft/802.1/Qdj/ieee802-dot1q-tsn-types.yang
+///
+/// # Description
+/// Common typedefs and groupings for TSN user/network configuration in
+/// IEEE Std 802.1Q.
+///
+/// Copyright (C) IEEE (2022).
+///
+/// This version of this YANG module is part of IEEE Std 802.1Q; see the
+/// standard itself for full legal notices.
 pub mod tsn_types;
 
 /// Rust-Types for YANG-Models
 ///
 /// https://github.com/YangModels/yang/blob/main/standard/ieee/draft/802.1/Qdj/ieee802-dot1q-tsn-config-uni.yang
+///
+/// # Description
+/// Time-Sensitive Networking (TSN) User/Network Interface (UNI) for the
+/// exchange of information between CUC and CNC that are required to
+/// configure TSN Streams in a TSN network.
 pub mod uni_types;
 
 pub mod topology {
@@ -94,8 +108,8 @@ pub mod scheduling {
 
 pub mod computation {
     pub enum ComputationType {
-        All(super::uni_types::stream_request::Input),
-        PlannedAndModified(super::uni_types::stream_request::Input),
-        List(super::uni_types::stream_request::Input),
+        All(super::uni_types::compute_streams::Input),
+        PlannedAndModified(super::uni_types::compute_streams::Input),
+        List(super::uni_types::compute_streams::Input),
     }
 }

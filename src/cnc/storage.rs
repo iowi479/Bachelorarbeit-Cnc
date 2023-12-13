@@ -1,6 +1,6 @@
 use super::cnc::{Cnc, CNC_NOT_PRESENT};
 use super::types::scheduling::Config;
-use super::types::uni_types::{self, stream_request, Stream, StreamStatus};
+use super::types::uni_types::{self, compute_streams, Stream, StreamStatus};
 use rand::Rng;
 use std::collections::HashMap;
 use std::fs::File;
@@ -15,12 +15,12 @@ pub trait StorageAdapterInterface {
 
     fn get_streams_in_domains(
         &self,
-        domains: Vec<stream_request::Domain>,
+        domains: Vec<compute_streams::Domain>,
     ) -> Vec<uni_types::Domain>;
-    fn get_streams_in_domain(&self, domain: stream_request::Domain) -> Vec<uni_types::Domain>;
+    fn get_streams_in_domain(&self, domain: compute_streams::Domain) -> Vec<uni_types::Domain>;
     fn get_planned_and_modified_streams_in_domains(
         &self,
-        domains: Vec<stream_request::Domain>,
+        domains: Vec<compute_streams::Domain>,
     ) -> Vec<uni_types::Domain>;
 
     fn remove_all_streams(&self, cuc_id: &String);
@@ -250,7 +250,7 @@ impl StorageAdapterInterface for FileStorage {
     }
 
     /// get streams of a single cuc in the domain
-    fn get_streams_in_domain(&self, get_domain: stream_request::Domain) -> Vec<uni_types::Domain> {
+    fn get_streams_in_domain(&self, get_domain: compute_streams::Domain) -> Vec<uni_types::Domain> {
         let domain_lock = self.domains.write().unwrap();
         let mut result: Vec<uni_types::Domain> = Vec::new();
 
@@ -391,7 +391,7 @@ impl StorageAdapterInterface for FileStorage {
     /// goes through all domains and retures all with all subsecuent cucs and all their streams
     fn get_streams_in_domains(
         &self,
-        domains: Vec<stream_request::Domain>,
+        domains: Vec<compute_streams::Domain>,
     ) -> Vec<uni_types::Domain> {
         let mut result: Vec<uni_types::Domain> = Vec::new();
 
@@ -423,7 +423,7 @@ impl StorageAdapterInterface for FileStorage {
     /// goes through all domains and retures all with all subsecuent cucs and their planned or modified streams
     fn get_planned_and_modified_streams_in_domains(
         &self,
-        domains: Vec<stream_request::Domain>,
+        domains: Vec<compute_streams::Domain>,
     ) -> Vec<uni_types::Domain> {
         let mut result: Vec<uni_types::Domain> = Vec::new();
 

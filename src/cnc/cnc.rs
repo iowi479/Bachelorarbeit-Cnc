@@ -170,7 +170,7 @@ impl NorthboundControllerInterface for Cnc {
     fn compute_streams(
         &self,
         computation: ComputationType,
-    ) -> types::uni_types::stream_request::Output {
+    ) -> types::uni_types::compute_streams::Output {
         match self.schedule_computation_sender.send(computation) {
             Ok(_) => String::from("Success"),
             Err(e) => e.to_string(),
