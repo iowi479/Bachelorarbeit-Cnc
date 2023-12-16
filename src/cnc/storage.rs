@@ -88,13 +88,8 @@ impl FileStorage {
             Ok(s) => {
                 let result: Result<(), Error> = Self::write_to_file(self.domains_path, s.clone());
                 if let Err(e) = result {
-                    println!("[Storage] no existing file found... creating one {e:?}");
-                    let result_creating: Result<(), Error> =
-                        Self::create_and_write_to_file(self.domains_path, s);
-                    if let Err(e) = result_creating {
-                        println!("[Storage] error while creating file, {e:?}");
-                        panic!("[Storage] not able to function without a file");
-                    }
+                    println!("[Storage] error while creating file, {e:?}");
+                    panic!("[Storage] not able to function without a file");
                 }
             }
         }
@@ -106,25 +101,14 @@ impl FileStorage {
             Ok(s) => {
                 let result: Result<(), Error> = Self::write_to_file(self.configs_path, s.clone());
                 if let Err(e) = result {
-                    println!("[Storage] no existing file found... creating one {e:?}");
-                    let result_creating: Result<(), Error> =
-                        Self::create_and_write_to_file(self.configs_path, s);
-                    if let Err(e) = result_creating {
-                        println!("[Storage] error while creating file, {e:?}");
-                        panic!("[Storage] not able to function without a file");
-                    }
+                    println!("[Storage] error while creating file, {e:?}");
+                    panic!("[Storage] not able to function without a file");
                 }
             }
         }
     }
 
     fn write_to_file(file_path: &str, content: String) -> Result<(), Error> {
-        let mut file: File = File::create(file_path)?;
-        file.write_all(content.as_bytes())?;
-        Result::Ok(())
-    }
-
-    fn create_and_write_to_file(file_path: &str, content: String) -> Result<(), Error> {
         let mut file: File = File::create(file_path)?;
         file.write_all(content.as_bytes())?;
         Result::Ok(())
