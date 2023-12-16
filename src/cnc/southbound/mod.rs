@@ -92,6 +92,10 @@ impl SouthboundAdapterInterface for NetconfAdapter {
     ) -> Vec<Port> {
         if let Ok(mut client) = get_netconf_connection(ip, ssh_port, ssh_username, ssh_password) {
             if let Ok(dtree) = get_interface_data(&mut client, &self.yang_ctx) {
+                if let Err(e) = client.close_session() {
+                    eprintln!("Error while closing netconf session: {:?}", e);
+                }
+
                 return get_port_delays(&dtree);
             } else {
                 eprintln!("couldnt parse datatree...");
