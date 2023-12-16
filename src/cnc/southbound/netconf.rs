@@ -18,7 +18,10 @@ use crate::cnc::types::{
 
 use super::types::YangModule;
 
+/// folder for all needed yang-models
 const SEARCH_DIR: &str = "./assets/yang/";
+
+/// all yang-models to load have to be included here.
 const YANG_MODULES: &'static [YangModule] = &[
     YangModule::new("ietf-interfaces"), // downloaded because the switch didnt return it...
     YangModule::new("ietf-yang-types"),
@@ -46,6 +49,8 @@ pub fn get_netconf_connection(
     Ok(client)
 }
 
+/// this runs a <get-config> rpc on the netconf-client. This will provied all configurable
+/// fields to edit and commit in the end.
 pub fn get_config_interfaces(
     client: &mut NetconfClient,
     ctx: &Arc<Context>,
@@ -80,7 +85,9 @@ pub fn get_config_interfaces(
     Ok(dtree)
 }
 
-pub fn modify_datatree(dtree: &mut DataTree, config: &Vec<PortConfiguration>) {
+/// the provided configurations will be loaded into the given dtree. If the nodes dont already exist,
+/// they will be created. If they exist with different values, they will be overriden.
+pub fn put_config_in_dtree(dtree: &mut DataTree, config: &Vec<PortConfiguration>) {
     for port_configuration in config {
         let port_xpath = format!(
             "/ietf-interfaces:interfaces/interface[name='{}']/ieee802-dot1q-sched:gate-parameters",

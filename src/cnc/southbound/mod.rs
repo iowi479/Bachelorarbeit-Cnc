@@ -1,4 +1,4 @@
-use self::netconf::{create_yang_context, get_config_interfaces, modify_datatree};
+use self::netconf::{create_yang_context, get_config_interfaces, put_config_in_dtree};
 use super::cnc::Cnc;
 use super::types::scheduling::Schedule;
 use super::types::topology::{Port, SSHConfigurationParams, Topology};
@@ -66,7 +66,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                             get_config_interfaces(&mut client, &self.yang_ctx)
                         {
                             // print_whole_datatree(&netconf_configuration);
-                            modify_datatree(&mut netconf_configuration, &config.ports);
+                            put_config_in_dtree(&mut netconf_configuration, &config.ports);
                             // print_whole_datatree(&netconf_configuration);
                             let config_result =
                                 edit_config_in_candidate(&mut client, &netconf_configuration);
