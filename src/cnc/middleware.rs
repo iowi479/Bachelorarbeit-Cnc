@@ -8,7 +8,6 @@ use super::types::uni_types::Domain;
 use std::{sync::Weak, thread, time::Duration};
 
 pub trait SchedulerAdapterInterface {
-    // TODO streams sorted by domain?
     fn compute_schedule(&self, topology: &Topology, domains: &Vec<Domain>) -> Schedule;
 
     /// # CNC Configuration
