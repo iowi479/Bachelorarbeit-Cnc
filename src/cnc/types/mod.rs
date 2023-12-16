@@ -74,7 +74,7 @@ pub mod topology {
         pub ports: Vec<Port>,
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, Debug)]
     pub struct Port {
         pub name: String,
         pub delays: Vec<super::tsn_types::BridgePortDelays>,

@@ -1116,7 +1116,7 @@ pub struct GroupStatusTalkerListener {
 }
 
 /// This packet is only viable for the specific b&r switch used in this paper. Since this Object is not (yet) present in the official IEEE Standard for TSN.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BridgePortDelays {
     pub port_speed: u32,
     pub dependent_rx_delay_min: u32,
@@ -1127,4 +1127,20 @@ pub struct BridgePortDelays {
     pub independent_rly_delay_max: u32,
     pub independent_tx_delay_min: u32,
     pub independent_tx_delay_max: u32,
+}
+
+impl BridgePortDelays {
+    pub fn new() -> Self {
+        Self {
+            port_speed: 0,
+            dependent_rx_delay_max: 0,
+            dependent_rx_delay_min: 0,
+            independent_rly_delay_max: 0,
+            independent_rly_delay_min: 0,
+            independent_rx_delay_max: 0,
+            independent_rx_delay_min: 0,
+            independent_tx_delay_max: 0,
+            independent_tx_delay_min: 0,
+        }
+    }
 }

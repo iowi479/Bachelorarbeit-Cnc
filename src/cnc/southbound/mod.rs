@@ -1,14 +1,30 @@
+use crate::cnc::southbound::netconf::{
+    get_interface_data, get_netconf_connection, get_port_delays,
+};
+
+use self::netconf::create_yang_context;
+
 use super::cnc::Cnc;
 use super::types::scheduling::{Config, Schedule};
 use super::types::topology::{NodeInformation, Port, Topology};
-use super::types::tsn_types::BridgePortDelays;
 use netconf_client::errors::NetconfClientError;
+use std::sync::Arc;
 use std::{net::IpAddr, sync::Weak};
+use yang2::context::Context;
+
+mod netconf;
+mod types;
 
 pub trait SouthboundControllerInterface {}
 pub trait SouthboundAdapterInterface {
     fn configure_network(&self, topology: &Topology, schedule: &Schedule);
-    fn retrieve_station_capibilities(&self, ip: String) -> Vec<Port>;
+    fn retrieve_station_capibilities(
+        &self,
+        ip: &str,
+        ssh_port: u16,
+        ssh_username: &str,
+        ssh_password: &str,
+    ) -> Vec<Port>;
 
     /// # CNC Configuration
     /// Minimum requirement:
@@ -20,12 +36,14 @@ pub trait SouthboundAdapterInterface {
 
 pub struct NetconfAdapter {
     cnc: Weak<Cnc>,
+    yang_ctx: Arc<Context>,
 }
 
 impl NetconfAdapter {
     pub fn new() -> Self {
         Self {
             cnc: Weak::default(),
+            yang_ctx: create_yang_context(),
         }
     }
 
@@ -41,23 +59,6 @@ impl NetconfAdapter {
         }
 
         Ok(())
-    }
-
-    pub fn get_bridge_delay_filter(name: Option<&str>) -> String {
-        // TODO fix filter
-        let filter = "<interfaces>
-            <interface>
-                <name>xxxxxxxxxx</name>
-                <bridge-port>
-                </bridge-port>
-            </interface>
-        </interfaces>";
-
-        if let Some(name) = name {
-            return filter.replace("xxxxxxxxxx", name);
-        } else {
-            return filter.replace("xxxxxxxxxx", "");
-        }
     }
 }
 
@@ -82,70 +83,23 @@ impl SouthboundAdapterInterface for NetconfAdapter {
         }
     }
 
-    fn retrieve_station_capibilities(&self, ip: String) -> Vec<Port> {
-        // TODO impl retrieve capabilites
-        // may not be possible atm using netconf
-
-        println!("[Southbound] <get> bridge-port-delays of {ip}");
-
-        let mut ports: Vec<Port> = Vec::new();
-
-        ports.push(Port {
-            name: String::from("sn0p2"),
-            delays: vec![
-                BridgePortDelays {
-                    port_speed: 100,
-                    dependent_rx_delay_min: 80000,
-                    dependent_rx_delay_max: 80000,
-                    independent_rx_delay_min: 374,
-                    independent_rx_delay_max: 384,
-                    independent_rly_delay_min: 610,
-                    independent_rly_delay_max: 1350,
-                    independent_tx_delay_min: 2210,
-                    independent_tx_delay_max: 3882,
-                },
-                BridgePortDelays {
-                    port_speed: 1000,
-                    dependent_rx_delay_min: 80000,
-                    dependent_rx_delay_max: 80000,
-                    independent_rx_delay_min: 326,
-                    independent_rx_delay_max: 336,
-                    independent_rly_delay_min: 486,
-                    independent_rly_delay_max: 1056,
-                    independent_tx_delay_min: 994,
-                    independent_tx_delay_max: 2658,
-                },
-            ],
-        });
-        ports.push(Port {
-            name: String::from("sn0p3"),
-            delays: vec![
-                BridgePortDelays {
-                    port_speed: 100,
-                    dependent_rx_delay_min: 80000,
-                    dependent_rx_delay_max: 80000,
-                    independent_rx_delay_min: 374,
-                    independent_rx_delay_max: 384,
-                    independent_rly_delay_min: 610,
-                    independent_rly_delay_max: 1350,
-                    independent_tx_delay_min: 2210,
-                    independent_tx_delay_max: 3882,
-                },
-                BridgePortDelays {
-                    port_speed: 1000,
-                    dependent_rx_delay_min: 80000,
-                    dependent_rx_delay_max: 80000,
-                    independent_rx_delay_min: 326,
-                    independent_rx_delay_max: 336,
-                    independent_rly_delay_min: 486,
-                    independent_rly_delay_max: 1056,
-                    independent_tx_delay_min: 994,
-                    independent_tx_delay_max: 2658,
-                },
-            ],
-        });
-
-        return ports;
+    fn retrieve_station_capibilities(
+        &self,
+        ip: &str,
+        ssh_port: u16,
+        ssh_username: &str,
+        ssh_password: &str,
+    ) -> Vec<Port> {
+        if let Ok(mut client) = get_netconf_connection(ip, ssh_port, ssh_username, ssh_password) {
+            if let Ok(dtree) = get_interface_data(&mut client, &self.yang_ctx) {
+                return get_port_delays(&dtree);
+            } else {
+                eprintln!("couldnt parse datatree...");
+            }
+        } else {
+            eprintln!("couldnt connect to bridge...");
+        }
+        return Vec::new();
     }
 
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
