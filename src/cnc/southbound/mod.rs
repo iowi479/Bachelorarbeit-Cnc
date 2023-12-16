@@ -44,6 +44,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
     fn configure_network(&self, topology: &Topology, schedule: &Schedule) {
         let mut configured_nodes: Vec<NetconfClient> = Vec::new();
 
+        // TODO make verbose
         println!("Schedule {:?}", schedule);
 
         for config in schedule.configs.iter() {
