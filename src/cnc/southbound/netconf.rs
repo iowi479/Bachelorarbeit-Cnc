@@ -1,3 +1,9 @@
+use super::types::YangModule;
+use crate::cnc::types::{
+    scheduling::PortConfiguration,
+    topology::{Port, SSHConfigurationParams},
+    tsn_types::BridgePortDelays,
+};
 use netconf_client::{
     errors::NetconfClientError,
     models::requests::{Filter, FilterType},
@@ -9,14 +15,6 @@ use yang2::{
     data::{Data, DataFormat, DataParserFlags, DataPrinterFlags, DataTree, DataValidationFlags},
     schema::DataValue,
 };
-
-use crate::cnc::types::{
-    scheduling::PortConfiguration,
-    topology::{Port, SSHConfigurationParams},
-    tsn_types::BridgePortDelays,
-};
-
-use super::types::YangModule;
 
 /// folder for all needed yang-models
 const SEARCH_DIR: &str = "./assets/yang/";
