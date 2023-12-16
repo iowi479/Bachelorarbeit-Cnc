@@ -10,6 +10,7 @@ pub mod notification_types;
 /// Rust-Types for YANG-Models
 ///
 /// https://github.com/YangModels/yang/blob/main/standard/ieee/draft/802.1/Qcw/ieee802-dot1q-sched.yang
+/// also the b&r model: ieee802-dot1q-bridge-delays
 ///
 /// # Description
 /// This module provides for management of IEEE Std 802.1Q Bridges that
