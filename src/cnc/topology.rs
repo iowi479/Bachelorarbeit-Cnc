@@ -1,6 +1,7 @@
 use super::cnc::{Cnc, CNC_NOT_PRESENT};
 use super::types::topology::{
-    Connection, ConnectionInterface, NodeInformation, NodeType, Path, Topology,
+    Connection, ConnectionInterface, NodeInformation, NodeType, Path, SSHConfigurationParams,
+    Topology,
 };
 use std::{
     net::{IpAddr, Ipv4Addr},
@@ -65,10 +66,15 @@ impl MockTopology {
 
         nodes.push(NodeInformation {
             id: 1,
-            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
+            ip: IpAddr::V4(Ipv4Addr::new(10, 2, 0, 1)),
             endstation: NodeType::Bridge,
             ports: Vec::new(),
-            configuration_params: Some((830, String::from("admin"))),
+            configuration_params: Some(SSHConfigurationParams {
+                ip: String::from("10.2.0.1"),
+                port: 830,
+                username: String::from("admin"),
+                password: String::from("admin"),
+            }),
         });
 
         nodes.push(NodeInformation {

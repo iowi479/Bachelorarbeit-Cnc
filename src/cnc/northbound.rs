@@ -223,8 +223,8 @@ impl NorthboundAdapterInterface for MockUniAdapter {
             cnc.compute_streams(ComputationType::All(domain));
 
             thread::sleep(Duration::from_secs(5));
-            let res = cnc.remove_streams(&cuc_id, vec![String::from("00-00-00-00-00-00:00-01")]);
-            println!("[Northbound] response to remove_streams {res}");
+            // let res = cnc.remove_streams(&cuc_id, vec![String::from("00-00-00-00-00-00:00-01")]);
+            // println!("[Northbound] response to remove_streams {res}");
 
             thread::sleep(Duration::from_secs(5));
         });

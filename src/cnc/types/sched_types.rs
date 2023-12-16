@@ -5,8 +5,13 @@ use serde::{Deserialize, Serialize};
 /// gateStatesValue; the second parameter is a timeIntervalValue
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GateControlEntry {
+    /// The name (type) of the operation for this entry.
     pub operation_name: GateControlOperation,
 
+    /// timeIntervalValue is a 32-bit unsigned integer, representing a
+    /// number of nanoseconds. After timeIntervalValue nanoseconds have
+    /// elapsed since the completion of the previous entry in the gate
+    /// control list, control passes to the next entry.
     pub time_interval_value: u32,
 
     /// gateStatesValue is the gate states for this entry for the Port.
@@ -51,7 +56,24 @@ pub struct QueueMaxSduEntry {
     transmission_overrun: u64,
 }
 
+/// This grouping specifies a PTP timestamp, represented as a 48-bit
+/// unsigned integer number of seconds and a 32-bit unsigned integer
+/// number of nanoseconds.
+///
+/// # Content
+/// 0 - seconds
+///
+/// This is the integer portion of the timestamp in units of seconds.
+/// The upper 16 bits are always zero.
+///
+/// 1 - nanoseconds
+///
+/// This is the fractional portion of the timestamp in units of
+/// nanoseconds. This value is always less than 10^9.
+pub type PtpTimeGrouping = (u64, u32);
+
 pub type PtpTimeScale = u32;
+
 pub type RationalGrouping = (i32, i32);
 
 ///A table that contains the per-port manageable parameters for
@@ -184,17 +206,54 @@ pub struct GateParameterTableEntry {
     supported_interval_max: u32,
 }
 
+/// This is the GateParameterTableEntry but only with the configurable
+/// fields. All fixed fields are removed.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ConfigurableGateParameterTableEntry {
-    // YANG -> The value must be retained across reinitializations of the management system.
-    // queue_max_sdu_table: Vec<QueueMaxSduEntry>,
+    /// The GateEnabled parameter determines whether traffic scheduling
+    /// is active (true) or inactive (false). The value must be retained
+    /// across reinitializations of the management system.
     pub gate_enable: bool,
-    pub admin_gate_states: u8,
-    pub admin_control_list: Vec<GateControlEntry>,
-    pub admin_cycle_time: RationalGrouping,
-    pub admin_cycle_time_extension: u32,
-    pub admin_base_time: PtpTimeScale,
 
-    // must not be retained... This applies the config?
+    /// AdminGateStates is the administrative value of the initial gate
+    /// states for the Port. The bits of the octet represent the gate
+    /// states for the corresponding traffic classes; the most-significant
+    /// bit corresponds to traffic class 7, the least-significant bit to
+    /// traffic class 0. A bit value of 0 indicates closed; a bit value of
+    /// 1 indicates open. The value must be retained across
+    /// reinitializations of the management system.
+    pub admin_gate_states: u8,
+
+    /// AdminControlList is the administrative value of the gate control
+    /// list for the Port. The value must be retained across
+    /// reinitializations of the management system.
+    pub admin_control_list: Vec<GateControlEntry>,
+
+    /// AdminCycleTime specifies the administrative value of the gating
+    /// cycle time for the Port. AdminCycleTime is a rational number of
+    /// seconds, defined by an integer numerator and an integer
+    /// denominator. The value must be retained across reinitializations
+    /// of the management system.
+    pub admin_cycle_time: RationalGrouping,
+
+    /// An unsigned integer number of nanoseconds, defining the maximum
+    /// amount of time by which the gating cycle for the Port is permitted
+    /// to be extended when a new cycle configuration is being installed.
+    /// This is the administrative value. The value must be retained
+    /// across reinitializations of the management system.
+    pub admin_cycle_time_extension: u32,
+
+    /// The administrative value of the base time at which gating cycles
+    /// begin, expressed as an IEEE 1588 precision time protocol (PTP)
+    /// timescale. The value must be retained across reinitializations of
+    /// the management system.
+    pub admin_base_time: PtpTimeGrouping,
+
+    /// The ConfigChange parameter signals the start of a configuration
+    /// change when it is set to TRUE, indicating that the administrative
+    /// parameters for the Port are ready to be copied into their
+    /// corresponding operational parameters. This should only be done
+    /// when the various administrative parameters are all set to
+    /// appropriate values.
     pub config_change: bool,
 }

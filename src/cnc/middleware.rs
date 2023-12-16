@@ -49,12 +49,12 @@ impl IPVSDsyncTSNScheduling {
                 admin_gate_states: 255,
                 admin_control_list: vec![GateControlEntry {
                     operation_name: GateControlOperation::SetGateStates,
-                    time_interval_value: 100000,
+                    time_interval_value: 320000,
                     gate_state_value: 255,
                 }],
-                admin_cycle_time: (100000, 100000),
+                admin_cycle_time: (320000, 1000000000),
                 admin_cycle_time_extension: 0,
-                admin_base_time: starts[0].1,
+                admin_base_time: (starts[0].1 as u64, 0),
                 config_change: true,
             },
         });
@@ -66,12 +66,12 @@ impl IPVSDsyncTSNScheduling {
                 admin_gate_states: 255,
                 admin_control_list: vec![GateControlEntry {
                     operation_name: GateControlOperation::SetGateStates,
-                    time_interval_value: 100000,
+                    time_interval_value: 320000,
                     gate_state_value: 255,
                 }],
-                admin_cycle_time: (100000, 100000),
+                admin_cycle_time: (320000, 1000000000),
                 admin_cycle_time_extension: 0,
-                admin_base_time: starts[0].1,
+                admin_base_time: (starts[0].1 as u64, 0),
                 config_change: true,
             },
         });

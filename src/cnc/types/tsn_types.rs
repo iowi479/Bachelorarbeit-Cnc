@@ -1116,20 +1116,40 @@ pub struct GroupStatusTalkerListener {
 }
 
 /// This packet is only viable for the specific b&r switch used in this paper. Since this Object is not (yet) present in the official IEEE Standard for TSN.
+///
+/// A list containing a set of the bridge port delays for every available port speed.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BridgePortDelays {
+    /// Bridge port speed in Megabits per second (Mb/s).
     pub port_speed: u32,
+
+    /// Dependent RX delay minimum.
     pub dependent_rx_delay_min: u32,
+
+    /// Dependent RX delay maximum.
     pub dependent_rx_delay_max: u32,
+
+    /// Independent RX delay minimum.
     pub independent_rx_delay_min: u32,
+
+    /// Independent RX delay maximum.
     pub independent_rx_delay_max: u32,
+
+    /// Independent relay delay minimum.
     pub independent_rly_delay_min: u32,
+
+    /// Independent relay delay maximum.
     pub independent_rly_delay_max: u32,
+
+    /// Independent TX delay minimum.
     pub independent_tx_delay_min: u32,
+
+    /// Independent TX delay maximum.
     pub independent_tx_delay_max: u32,
 }
 
 impl BridgePortDelays {
+    /// This creates an "empty" object. All fields are initialized with 0.
     pub fn new() -> Self {
         Self {
             port_speed: 0,

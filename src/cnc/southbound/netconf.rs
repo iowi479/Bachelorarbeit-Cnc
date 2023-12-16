@@ -6,11 +6,15 @@ use netconf_client::{
 use std::sync::Arc;
 use yang2::{
     context::{Context, ContextFlags},
-    data::{Data, DataFormat, DataParserFlags, DataTree, DataValidationFlags},
+    data::{Data, DataFormat, DataParserFlags, DataPrinterFlags, DataTree, DataValidationFlags},
     schema::DataValue,
 };
 
-use crate::cnc::types::{topology::Port, tsn_types::BridgePortDelays};
+use crate::cnc::types::{
+    scheduling::PortConfiguration,
+    topology::{Port, SSHConfigurationParams},
+    tsn_types::BridgePortDelays,
+};
 
 use super::types::YangModule;
 
@@ -27,12 +31,14 @@ const YANG_MODULES: &'static [YangModule] = &[
 ];
 
 pub fn get_netconf_connection(
-    ip: &str,
-    port: u16,
-    username: &str,
-    password: &str,
+    config_params: SSHConfigurationParams,
 ) -> Result<NetconfClient, NetconfClientError> {
-    let mut client = NetconfClient::new(ip, port, username, password);
+    let mut client = NetconfClient::new(
+        config_params.ip.as_str(),
+        config_params.port,
+        config_params.username.as_str(),
+        config_params.password.as_str(),
+    );
 
     client.connect()?;
     client.send_hello()?;
@@ -40,20 +46,206 @@ pub fn get_netconf_connection(
     Ok(client)
 }
 
+pub fn get_config_interfaces(
+    client: &mut NetconfClient,
+    ctx: &Arc<Context>,
+) -> Result<DataTree, NetconfClientError> {
+    let get_config_interfaces_filter = Filter {
+        filter_type: FilterType::Subtree,
+        data: "<interfaces xmlns=\"urn:ietf:params:xml:ns:yang:ietf-interfaces\">
+                    <interface>
+                        <gate-parameters xmlns=\"urn:ieee:std:802.1Q:yang:ieee802-dot1q-sched\">
+                        </gate-parameters>
+                    </interface>
+                </interfaces>"
+            .to_string(),
+    };
+
+    let response = client.get_config(
+        netconf_client::models::requests::DatastoreType::Candidate,
+        Some(get_config_interfaces_filter),
+    )?;
+
+    let data = response.data.expect("no data in dtree");
+
+    let dtree = DataTree::parse_string(
+        ctx,
+        data.as_str(),
+        DataFormat::XML,
+        DataParserFlags::NO_VALIDATION,
+        DataValidationFlags::empty(),
+    )
+    .expect("couldnt parse data");
+
+    Ok(dtree)
+}
+
+pub fn modify_datatree(dtree: &mut DataTree, config: &Vec<PortConfiguration>) {
+    for port_configuration in config {
+        let port_xpath = format!(
+            "/ietf-interfaces:interfaces/interface[name='{}']/ieee802-dot1q-sched:gate-parameters",
+            port_configuration.name
+        );
+        let config = &port_configuration.config;
+
+        put_gate_parameters_in_dtree(
+            dtree,
+            port_xpath.clone(),
+            "/gate-enabled",
+            config.gate_enable.to_string().as_str(),
+        );
+
+        put_gate_parameters_in_dtree(
+            dtree,
+            port_xpath.clone(),
+            "/admin-gate-states",
+            config.admin_gate_states.to_string().as_str(),
+        );
+
+        // admin-control-list
+        for (i, gce) in config.admin_control_list.iter().enumerate() {
+            let operation_name = match gce.operation_name {
+                crate::cnc::types::sched_types::GateControlOperation::SetGateStates => {
+                    "set-gate-states"
+                }
+                _ => panic!("not supported"),
+            };
+
+            let path_prefix = format!("/admin-control-list[index={}]", i);
+
+            put_gate_parameters_in_dtree(
+                dtree,
+                port_xpath.clone(),
+                (path_prefix.clone() + "/operation-name").as_str(),
+                operation_name,
+            );
+            put_gate_parameters_in_dtree(
+                dtree,
+                port_xpath.clone(),
+                (path_prefix.clone() + "/sgs-params/gate-states-value").as_str(),
+                gce.gate_state_value.to_string().as_str(),
+            );
+            put_gate_parameters_in_dtree(
+                dtree,
+                port_xpath.clone(),
+                (path_prefix.clone() + "/sgs-params/time-interval-value").as_str(),
+                gce.time_interval_value.to_string().as_str(),
+            );
+        }
+
+        put_gate_parameters_in_dtree(
+            dtree,
+            port_xpath.clone(),
+            "/admin-control-list-length",
+            config.admin_control_list.len().to_string().as_str(),
+        );
+        // ---
+
+        // admin-cycle-time
+        let cycle_time = config.admin_cycle_time;
+        put_gate_parameters_in_dtree(
+            dtree,
+            port_xpath.clone(),
+            "/admin-cycle-time/numerator",
+            cycle_time.0.to_string().as_str(),
+        );
+        put_gate_parameters_in_dtree(
+            dtree,
+            port_xpath.clone(),
+            "/admin-cycle-time/denominator",
+            cycle_time.1.to_string().as_str(),
+        );
+        // ---
+
+        // admin-base-time
+        let basetime = config.admin_base_time;
+        put_gate_parameters_in_dtree(
+            dtree,
+            port_xpath.clone(),
+            "/admin-base-time/seconds",
+            basetime.0.to_string().as_str(),
+        );
+        put_gate_parameters_in_dtree(
+            dtree,
+            port_xpath.clone(),
+            "/admin-base-time/fractional-seconds",
+            basetime.1.to_string().as_str(),
+        );
+        // ---
+
+        put_gate_parameters_in_dtree(
+            dtree,
+            port_xpath.clone(),
+            "/admin-cycle-time-extension",
+            config.admin_cycle_time_extension.to_string().as_str(),
+        );
+
+        put_gate_parameters_in_dtree(
+            dtree,
+            port_xpath.clone(),
+            "/config-change",
+            config.config_change.to_string().as_str(),
+        );
+    }
+}
+
+/// puts the in path specified node at xpath into the dtree. The value to insert can be provided as well.
+/// If the path doesnt exist, it gets created. Also nodes before which dont exist will be created.
+fn put_gate_parameters_in_dtree(dtree: &mut DataTree, port_xpath: String, path: &str, value: &str) {
+    let config_path = port_xpath + path;
+    let config_path = config_path.as_str();
+
+    dtree
+        .new_path(config_path, Some(value), false)
+        .expect(format!("[Southbound] couldnt configure node {} in dtree...", path).as_str());
+}
+
+/// this is for debugging. Can be unused...
+/// prints dtree in XML format to stdout
+#[allow(unused)]
+pub fn print_whole_datatree(dtree: &DataTree) {
+    dtree
+        .print_file(
+            std::io::stdout(),
+            DataFormat::XML,
+            DataPrinterFlags::WD_ALL | DataPrinterFlags::WITH_SIBLINGS,
+        )
+        .expect("Failed to print dtree");
+}
+
+pub fn edit_config_in_candidate(
+    client: &mut NetconfClient,
+    dtree: &DataTree,
+) -> Result<(), NetconfClientError> {
+    let data = dtree
+        .print_string(
+            DataFormat::XML,
+            DataPrinterFlags::WD_ALL | DataPrinterFlags::WITH_SIBLINGS,
+        )
+        .expect("couldnt parse datatree")
+        .expect("no data");
+
+    let _res = client.edit_config(
+        netconf_client::models::requests::DatastoreType::Candidate,
+        data,
+        Some(netconf_client::models::requests::DefaultOperationType::Merge),
+        Some(netconf_client::models::requests::TestOptionType::TestThenSet),
+        Some(netconf_client::models::requests::ErrorOptionType::RollbackOnError),
+    )?;
+
+    Ok(())
+}
+
 pub fn get_interface_data(
     client: &mut NetconfClient,
     ctx: &Arc<Context>,
-) -> Result<DataTree, Box<dyn std::error::Error>> {
+) -> Result<DataTree, NetconfClientError> {
     let get_interfaces_filter = Filter {
         filter_type: FilterType::Subtree,
         data: "<interfaces xmlns=\"urn:ietf:params:xml:ns:yang:ietf-interfaces\">
                     <interface>
-                
-                        <gate-parameters xmlns=\"urn:ieee:std:802.1Q:yang:ieee802-dot1q-sched\">
-                        </gate-parameters>
-
-                        <bridge-port xmlns=\"urn:ieee:std:802.1Q:yang:ieee802-dot1q-bridge\">
-                        </bridge-port>
+                        <gate-parameters xmlns=\"urn:ieee:std:802.1Q:yang:ieee802-dot1q-sched\"></gate-parameters>
+                        <bridge-port xmlns=\"urn:ieee:std:802.1Q:yang:ieee802-dot1q-bridge\"></bridge-port>
                     </interface>
                 </interfaces>"
             .to_string(),
@@ -61,13 +253,16 @@ pub fn get_interface_data(
 
     let response = client.get(Some(get_interfaces_filter))?;
 
+    let data = response.data.expect("no data in dtree");
+
     let dtree = DataTree::parse_string(
         ctx,
-        response.data.expect("no data").as_str(),
+        data.as_str(),
         DataFormat::XML,
         DataParserFlags::NO_VALIDATION,
         DataValidationFlags::empty(),
-    )?;
+    )
+    .expect("couldnt parse data");
 
     Ok(dtree)
 }

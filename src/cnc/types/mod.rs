@@ -70,8 +70,16 @@ pub mod topology {
         pub id: u32,
         pub ip: std::net::IpAddr,
         pub endstation: NodeType,
-        pub configuration_params: Option<(u32, String)>,
+        pub configuration_params: Option<SSHConfigurationParams>,
         pub ports: Vec<Port>,
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct SSHConfigurationParams {
+        pub ip: String,
+        pub port: u16,
+        pub username: String,
+        pub password: String,
     }
 
     #[derive(Clone, Debug)]
@@ -98,18 +106,19 @@ pub mod topology {
 pub mod scheduling {
     use serde::{Deserialize, Serialize};
 
-    #[derive(Serialize, Deserialize, Clone)]
+    #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct Config {
         pub node_id: u32,
         pub ports: Vec<PortConfiguration>,
     }
 
-    #[derive(Serialize, Deserialize, Clone)]
+    #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct PortConfiguration {
         pub name: String,
         pub config: super::sched_types::ConfigurableGateParameterTableEntry,
     }
 
+    #[derive(Debug)]
     pub struct Schedule {
         pub configs: Vec<Config>,
     }
