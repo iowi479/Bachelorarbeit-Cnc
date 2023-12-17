@@ -37,7 +37,7 @@ impl IPVSDsyncTSNScheduling {
         return vec![(1, 1000)];
     }
 
-    pub fn parse_to_schedule(&self, starts: Vec<(u32, u32)>) -> Schedule {
+    pub fn parse_to_schedule(&self, _starts: Vec<(u32, u32)>, _topology: &Topology) -> Schedule {
         let mut configs: Vec<Config> = Vec::new();
         let mut ports: Vec<PortConfiguration> = Vec::new();
 
@@ -51,9 +51,9 @@ impl IPVSDsyncTSNScheduling {
                     time_interval_value: 320000,
                     gate_state_value: 255,
                 }],
-                admin_cycle_time: (320000, 1000000000),
+                admin_cycle_time: (100 * 3200, 1000000000),
                 admin_cycle_time_extension: 0,
-                admin_base_time: (starts[0].1 as u64, 0),
+                admin_base_time: (0, 0),
                 config_change: true,
             },
         });
@@ -68,9 +68,9 @@ impl IPVSDsyncTSNScheduling {
                     time_interval_value: 320000,
                     gate_state_value: 255,
                 }],
-                admin_cycle_time: (320000, 1000000000),
+                admin_cycle_time: (100 * 3200, 1000000000),
                 admin_cycle_time_extension: 0,
-                admin_base_time: (starts[0].1 as u64, 0),
+                admin_base_time: (0, 0),
                 config_change: true,
             },
         });
@@ -92,7 +92,7 @@ impl SchedulerAdapterInterface for IPVSDsyncTSNScheduling {
 
         let starts = self.compute(topology, domains);
 
-        return self.parse_to_schedule(starts);
+        return self.parse_to_schedule(starts, topology);
     }
 
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
