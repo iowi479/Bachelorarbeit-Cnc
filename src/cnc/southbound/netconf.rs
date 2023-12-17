@@ -22,7 +22,7 @@ const SEARCH_DIR: &str = "./assets/yang/";
 /// all yang-models to load have to be included here.
 const YANG_MODULES: &'static [YangModule] = &[
     YangModule::new("ietf-interfaces"), // downloaded because the switch didnt return it...
-    YangModule::new("ietf-yang-types"),
+    YangModule::new("ietf-yang-types"), // rest is downloaded from the b&r switch
     YangModule::new("iana-if-type"),
     YangModule::new("ieee802-types"),
     YangModule::new("ieee802-dot1q-bridge"),
