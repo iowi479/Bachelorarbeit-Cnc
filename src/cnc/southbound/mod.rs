@@ -1,7 +1,7 @@
 use self::netconf::{create_yang_context, get_config_interfaces, put_config_in_dtree};
-use super::cnc::Cnc;
 use super::types::scheduling::Schedule;
 use super::types::topology::{Port, SSHConfigurationParams, Topology};
+use super::Cnc;
 use crate::cnc::southbound::netconf::{
     edit_config_in_candidate, get_interface_data, get_netconf_connection, get_port_delays,
 };

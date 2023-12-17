@@ -1,6 +1,6 @@
-use super::cnc::{Cnc, CNC_NOT_PRESENT};
 use super::types::scheduling::Config;
 use super::types::uni_types::{self, compute_streams, Stream, StreamStatus};
+use super::{Cnc, CNC_NOT_PRESENT};
 use rand::Rng;
 use std::collections::HashMap;
 use std::fs::File;

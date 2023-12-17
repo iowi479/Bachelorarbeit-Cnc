@@ -1,6 +1,6 @@
 use ba::cnc::{
-    cnc::Cnc, middleware::IPVSDsyncTSNScheduling, northbound::MockUniAdapter,
-    southbound::NetconfAdapter, storage::FileStorage, topology::MockTopology,
+    middleware::IPVSDsyncTSNScheduling, northbound::MockUniAdapter, southbound::NetconfAdapter,
+    storage::FileStorage, topology::MockTopology, Cnc,
 };
 use std::sync::Arc;
 

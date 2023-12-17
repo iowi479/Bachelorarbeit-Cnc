@@ -1,8 +1,8 @@
-use super::cnc::{Cnc, CNC_NOT_PRESENT};
 use super::types::topology::{
     Connection, ConnectionInterface, NodeInformation, NodeType, Path, SSHConfigurationParams,
     Topology,
 };
+use super::{Cnc, CNC_NOT_PRESENT};
 use std::{
     net::{IpAddr, Ipv4Addr},
     sync::{RwLock, Weak},

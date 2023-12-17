@@ -1,4 +1,3 @@
-use super::cnc::{Cnc, CNC_NOT_PRESENT};
 use super::types::computation::ComputationType;
 use super::types::notification_types::NotificationContent;
 use super::types::tsn_types::{
@@ -9,6 +8,7 @@ use super::types::tsn_types::{
 use super::types::uni_types::{
     compute_streams, remove_streams, request_domain_id, request_free_stream_id,
 };
+use super::{Cnc, CNC_NOT_PRESENT};
 use std::sync::Weak;
 use std::time::Duration;
 use std::{thread, vec};

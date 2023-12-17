@@ -1,10 +1,10 @@
-use super::cnc::Cnc;
 use super::types::sched_types::{
     ConfigurableGateParameterTableEntry, GateControlEntry, GateControlOperation,
 };
 use super::types::scheduling::{Config, PortConfiguration, Schedule};
 use super::types::topology::Topology;
 use super::types::uni_types::Domain;
+use super::Cnc;
 use std::{sync::Weak, thread, time::Duration};
 
 pub trait SchedulerAdapterInterface {
