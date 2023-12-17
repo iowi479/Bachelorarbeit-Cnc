@@ -109,7 +109,7 @@ impl MockTopology {
             id: 1,
             a: ConnectionInterface {
                 node_id: 11,
-                port_name: String::from("eth0"),
+                port_name: String::from("eth1"),
             },
             b: ConnectionInterface {
                 node_id: 1,
