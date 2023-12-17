@@ -158,9 +158,8 @@ impl TopologyAdapterInterface for MockTopology {
         let cnc = self.cnc.upgrade().expect(CNC_NOT_PRESENT).clone();
 
         thread::spawn(move || loop {
-            thread::sleep(Duration::from_secs(10));
+            thread::sleep(Duration::from_secs(15));
             cnc.notify_topology_changed();
-            // println!("[Topology] Topology Changed");
         });
     }
 }
