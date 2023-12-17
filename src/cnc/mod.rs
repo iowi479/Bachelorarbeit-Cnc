@@ -134,32 +134,8 @@ impl Cnc {
         println!("[SCHEDULER] computation successfull");
 
         // TODO faild computations
-        let mut computed_notification: NotificationContent = Vec::new();
-        for domain in &domains {
-            let mut d = notification_types::Domain {
-                domain_id: domain.domain_id.clone(),
-                cucs: Vec::new(),
-            };
-
-            for cuc in &domain.cuc {
-                let mut c = notification_types::Cuc {
-                    cuc_id: cuc.cuc_id.clone(),
-                    streams: Vec::new(),
-                };
-
-                for stream in &cuc.stream {
-                    c.streams.push(notification_types::Stream {
-                        stream_id: stream.stream_id.clone(),
-                        failure_code: 0,
-                    })
-                }
-
-                d.cucs.push(c);
-            }
-
-            computed_notification.push(d);
-        }
-
+        let computed_notification: NotificationContent =
+            create_notification(&domains, &HashSet::new());
         cnc.northbound
             .compute_streams_completed(computed_notification);
 
@@ -174,42 +150,49 @@ impl Cnc {
             .set_streams_configured(&domains, &failed_streams);
         cnc.storage.set_configs(&schedule.configs);
 
-        // TODO mock notification
-        let mut notification: NotificationContent = Vec::new();
-        for domain in domains.iter() {
-            let mut d = notification_types::Domain {
-                domain_id: domain.domain_id.clone(),
-                cucs: Vec::new(),
-            };
-
-            for cuc in domain.cuc.iter() {
-                let mut c = notification_types::Cuc {
-                    cuc_id: cuc.cuc_id.clone(),
-                    streams: Vec::new(),
-                };
-
-                for stream in cuc.stream.iter() {
-                    let mut failure_code: u8 = 0;
-
-                    if failed_streams.get(&stream.stream_id).is_some() {
-                        failure_code = 1;
-                    }
-
-                    let s = notification_types::Stream {
-                        stream_id: stream.stream_id.clone(),
-                        failure_code,
-                    };
-
-                    c.streams.push(s);
-                }
-
-                d.cucs.push(c);
-            }
-
-            notification.push(d);
-        }
+        let notification: NotificationContent = create_notification(&domains, &failed_streams);
         cnc.northbound.configure_streams_completed(notification);
     }
+}
+
+fn create_notification(
+    domains: &Vec<uni_types::Domain>,
+    failed_streams: &HashSet<String>,
+) -> NotificationContent {
+    let mut notification: NotificationContent = Vec::new();
+    for domain in domains.iter() {
+        let mut notification_domain = notification_types::Domain {
+            domain_id: domain.domain_id.clone(),
+            cucs: Vec::new(),
+        };
+
+        for cuc in domain.cuc.iter() {
+            let mut notification_cuc = notification_types::Cuc {
+                cuc_id: cuc.cuc_id.clone(),
+                streams: Vec::new(),
+            };
+
+            for stream in cuc.stream.iter() {
+                let mut failure_code: u8 = 0;
+
+                if failed_streams.get(&stream.stream_id).is_some() {
+                    failure_code = 1;
+                }
+
+                let notification_stream = notification_types::Stream {
+                    stream_id: stream.stream_id.clone(),
+                    failure_code,
+                };
+
+                notification_cuc.streams.push(notification_stream);
+            }
+
+            notification_domain.cucs.push(notification_cuc);
+        }
+
+        notification.push(notification_domain);
+    }
+    notification
 }
 
 fn get_failed_streams(schedule: &Schedule, failed_nodes: HashSet<u32>) -> HashSet<String> {
