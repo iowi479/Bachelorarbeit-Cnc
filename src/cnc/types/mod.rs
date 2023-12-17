@@ -87,6 +87,7 @@ pub mod topology {
     pub struct Port {
         pub name: String,
         pub delays: Vec<super::tsn_types::BridgePortDelays>,
+        pub tick_granularity: u32,
     }
 
     #[derive(Clone)]
@@ -111,6 +112,7 @@ pub mod scheduling {
     pub struct Config {
         pub node_id: u32,
         pub ports: Vec<PortConfiguration>,
+        pub for_streams: Vec<String>,
     }
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -119,7 +121,7 @@ pub mod scheduling {
         pub config: super::sched_types::ConfigurableGateParameterTableEntry,
     }
 
-    #[derive(Debug)]
+    #[derive(Clone, Debug)]
     pub struct Schedule {
         pub configs: Vec<Config>,
     }

@@ -2,7 +2,7 @@ use super::types::scheduling::Config;
 use super::types::uni_types::{self, compute_streams, Stream, StreamStatus};
 use super::{Cnc, CNC_NOT_PRESENT};
 use rand::Rng;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{Error, Read, Write};
 use std::sync::{RwLock, Weak};
@@ -30,7 +30,11 @@ pub trait StorageAdapterInterface {
     fn set_streams(&self, cuc_id: &String, streams: &Vec<Stream>);
 
     /// This gets called after the configuration of the requested Streams was successfull.
-    fn set_streams_configured(&self, domains: &Vec<uni_types::Domain>);
+    fn set_streams_configured(
+        &self,
+        domains: &Vec<uni_types::Domain>,
+        failed_streams: &HashSet<String>,
+    );
 
     /// Returns the domain of the requesting CUC
     /// If the domain or cuc_id could not be found: returns None
@@ -449,8 +453,12 @@ impl StorageAdapterInterface for FileStorage {
         result
     }
 
-    /// sets StreamStatus to Configured on all provided streams
-    fn set_streams_configured(&self, domains: &Vec<uni_types::Domain>) {
+    /// sets StreamStatus to Configured on all provided streams. Although if the stream_id is also in the failed_streams it gets set to planned instead.
+    fn set_streams_configured(
+        &self,
+        domains: &Vec<uni_types::Domain>,
+        failed_streams: &HashSet<String>,
+    ) {
         let mut domain_lock = self.domains.write().unwrap();
         for change_domain in domains.iter() {
             for domain in domain_lock.iter_mut() {
@@ -461,7 +469,11 @@ impl StorageAdapterInterface for FileStorage {
                                 for change_stream in change_cuc.stream.iter() {
                                     for stream in cuc.stream.iter_mut() {
                                         if stream.stream_id == change_stream.stream_id {
-                                            stream.stream_status = StreamStatus::Configured;
+                                            if failed_streams.get(&stream.stream_id).is_none() {
+                                                stream.stream_status = StreamStatus::Configured;
+                                            } else {
+                                                stream.stream_status = StreamStatus::Planned;
+                                            }
                                         }
                                     }
                                 }

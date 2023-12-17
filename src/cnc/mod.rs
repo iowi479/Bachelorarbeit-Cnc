@@ -12,19 +12,21 @@ use self::storage::StorageAdapterInterface;
 use self::topology::{TopologyAdapterInterface, TopologyControllerInterface};
 use self::types::computation::ComputationType;
 use self::types::notification_types::{self, NotificationContent};
+use self::types::scheduling::Schedule;
 use self::types::topology::Topology;
 use self::types::tsn_types::GroupInterfaceId;
 use self::types::uni_types::{self, Stream};
+use std::collections::HashSet;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Weak};
-
-pub static CNC_NOT_PRESENT: &str = "CNC is not present exiting...";
 
 pub type NorthboundRef = Arc<dyn NorthboundAdapterInterface + Send + Sync>;
 pub type SouthboundRef = Arc<dyn SouthboundAdapterInterface + Send + Sync>;
 pub type StorageRef = Arc<dyn StorageAdapterInterface + Send + Sync>;
 pub type TopologyRef = Arc<dyn TopologyAdapterInterface + Send + Sync>;
 pub type SchedulerRef = Arc<dyn SchedulerAdapterInterface + Send + Sync>;
+
+pub static CNC_NOT_PRESENT: &str = "CNC is not present exiting...";
 
 pub struct Cnc {
     pub id: u32,
@@ -133,11 +135,13 @@ impl Cnc {
 
         println!("[SCHEDULER]: configuring now...");
 
-        cnc.southbound.configure_network(&topology, &schedule);
+        let failed_nodes = cnc.southbound.configure_network(&topology, &schedule);
+        let failed_streams = get_failed_streams(&schedule, failed_nodes);
 
         println!("[SCHEDULER]: configuring successfull");
 
-        cnc.storage.set_streams_configured(&domains);
+        cnc.storage
+            .set_streams_configured(&domains, &failed_streams);
         cnc.storage.set_configs(&schedule.configs);
 
         // TODO mock notification
@@ -155,9 +159,15 @@ impl Cnc {
                 };
 
                 for stream in cuc.stream.iter() {
+                    let mut failure_code: u8 = 0;
+
+                    if failed_streams.get(&stream.stream_id).is_some() {
+                        failure_code = 1;
+                    }
+
                     let s = notification_types::Stream {
                         stream_id: stream.stream_id.clone(),
-                        failure_code: 0,
+                        failure_code,
                     };
 
                     c.streams.push(s);
@@ -170,6 +180,20 @@ impl Cnc {
         }
         cnc.northbound.configure_streams_completed(notification);
     }
+}
+
+fn get_failed_streams(schedule: &Schedule, failed_nodes: HashSet<u32>) -> HashSet<String> {
+    let mut failed_streams: HashSet<String> = HashSet::new();
+
+    for config in &schedule.configs {
+        if failed_nodes.get(&config.node_id).is_some() {
+            for stream_id in &config.for_streams {
+                failed_streams.insert(stream_id.clone());
+            }
+        }
+    }
+
+    failed_streams
 }
 
 impl NorthboundControllerInterface for Cnc {

@@ -6,6 +6,7 @@ use crate::cnc::southbound::netconf::{
     edit_config_in_candidate, get_interface_data, get_netconf_connection, get_port_delays,
 };
 use netconf_client::netconf_client::NetconfClient;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::Weak;
 use yang2::context::Context;
@@ -15,7 +16,12 @@ mod types;
 
 pub trait SouthboundControllerInterface {}
 pub trait SouthboundAdapterInterface {
-    fn configure_network(&self, topology: &Topology, schedule: &Schedule);
+    /// configures the network.
+    ///
+    /// returns a list of node_ids. Each of the ids represents, that the configuration for this node failed.
+    fn configure_network(&self, topology: &Topology, schedule: &Schedule) -> HashSet<u32>;
+
+    /// requests the bridge-delay parameter of a specific bridge
     fn retrieve_station_capibilities(&self, config_params: SSHConfigurationParams) -> Vec<Port>;
 
     /// # CNC Configuration
@@ -41,11 +47,9 @@ impl NetconfAdapter {
 }
 
 impl SouthboundAdapterInterface for NetconfAdapter {
-    fn configure_network(&self, topology: &Topology, schedule: &Schedule) {
-        let mut configured_nodes: Vec<NetconfClient> = Vec::new();
-
-        // TODO make verbose
-        println!("Schedule {:?}", schedule);
+    fn configure_network(&self, topology: &Topology, schedule: &Schedule) -> HashSet<u32> {
+        let mut configured_nodes: Vec<(u32, NetconfClient)> = Vec::new();
+        let mut failed_nodes: HashSet<u32> = HashSet::new();
 
         for config in schedule.configs.iter() {
             if let Some(node) = topology.get_node(config.node_id) {
@@ -61,7 +65,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                 match connection_result {
                     Err(e) => eprintln!("[Southbound] error while connecting via netconf {e:?}"),
                     Ok(mut client) => {
-                        println!("[Southbound] successfully connected");
+                        println!("[Southbound] successfully connected to switch");
                         if let Ok(mut netconf_configuration) =
                             get_config_interfaces(&mut client, &self.yang_ctx)
                         {
@@ -73,9 +77,10 @@ impl SouthboundAdapterInterface for NetconfAdapter {
 
                             match config_result {
                                 Err(e) => {
-                                    eprintln!("failed while configuring {:?}", e)
+                                    failed_nodes.insert(config.node_id);
+                                    eprintln!("[Southbound] failed while configuring {:?}", e)
                                 }
-                                Ok(_) => configured_nodes.push(client),
+                                Ok(_) => configured_nodes.push((config.node_id, client)),
                             }
                         }
                     }
@@ -84,36 +89,41 @@ impl SouthboundAdapterInterface for NetconfAdapter {
         }
 
         if configured_nodes.len() == schedule.configs.len() {
-            for client in configured_nodes.iter_mut() {
-                // TODO impl netconf
-                println!("[Southbound] <commit> on ");
+            for (node_id, client) in configured_nodes.iter_mut() {
                 let commit_result = client.commit();
 
                 match commit_result {
-                    Ok(_) => println!("commit successful"),
-                    Err(e) => eprintln!("error while committing: {e:?}"),
+                    Ok(_) => {
+                        println!("[Southbound] commit successful")
+                    }
+                    Err(e) => {
+                        failed_nodes.insert(node_id.clone());
+                        eprintln!("[Southbound] error while committing: {e:?}");
+                    }
                 }
 
                 if let Err(e) = client.close_session() {
-                    eprintln!("Error while closing connection... {:?}", e);
+                    eprintln!("[Southbound] Error while closing connection... {:?}", e);
                 }
             }
         }
+
+        failed_nodes.iter().map(|x| x.clone()).collect()
     }
 
     fn retrieve_station_capibilities(&self, config_params: SSHConfigurationParams) -> Vec<Port> {
         if let Ok(mut client) = get_netconf_connection(config_params) {
             if let Ok(dtree) = get_interface_data(&mut client, &self.yang_ctx) {
                 if let Err(e) = client.close_session() {
-                    eprintln!("Error while closing netconf session: {:?}", e);
+                    eprintln!("[Southbound] Error while closing netconf session: {:?}", e);
                 }
 
                 return get_port_delays(&dtree);
             } else {
-                eprintln!("couldnt parse datatree...");
+                eprintln!("[Southbound] couldnt parse datatree...");
             }
         } else {
-            eprintln!("couldnt connect to bridge...");
+            eprintln!("[Southbound] couldnt connect to bridge...");
         }
         return Vec::new();
     }

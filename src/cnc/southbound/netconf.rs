@@ -319,6 +319,7 @@ pub fn get_port_delays(dtree: &DataTree) -> Vec<Port> {
         let mut port = Port {
             name,
             delays: Vec::new(),
+            tick_granularity: 3200, // TODO actually request this... should already be in the dtree... in gate-parameters
         };
 
         for bpdnode in dnode

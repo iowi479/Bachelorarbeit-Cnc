@@ -214,9 +214,9 @@ impl NorthboundAdapterInterface for MockUniAdapter {
 
             // start a scheduling run
             let domain: Vec<compute_streams::Domain> = vec![compute_streams::Domain {
-                domain_id: String::from("test-domain-id"),
+                domain_id: cnc.domain.clone(),
                 cuc: vec![compute_streams::CucElement {
-                    cuc_id: String::from("test-cuc-id"),
+                    cuc_id: cuc_id.clone(),
                     stream_list: None,
                 }],
             }];

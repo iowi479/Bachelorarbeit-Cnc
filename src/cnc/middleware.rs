@@ -75,7 +75,11 @@ impl IPVSDsyncTSNScheduling {
             },
         });
 
-        configs.push(Config { node_id: 1, ports });
+        configs.push(Config {
+            node_id: 1,
+            ports,
+            for_streams: vec![String::from("00-00-00-00-00-00:00-01")],
+        });
 
         return Schedule { configs };
     }
