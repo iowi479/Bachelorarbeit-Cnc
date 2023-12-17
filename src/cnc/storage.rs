@@ -1,5 +1,5 @@
 use super::types::scheduling::Config;
-use super::types::uni_types::{self, compute_streams, Stream, StreamStatus};
+use super::types::uni_types::{self, compute_streams, Cuc, Stream, StreamStatus};
 use super::{Cnc, CNC_NOT_PRESENT};
 use rand::Rng;
 use std::collections::{HashMap, HashSet};
@@ -286,6 +286,11 @@ impl StorageAdapterInterface for FileStorage {
                 } else {
                     cuc.stream.push(stream.clone());
                 }
+            } else {
+                domain.cuc.push(Cuc {
+                    cuc_id: cuc_id.clone(),
+                    stream: vec![stream.clone()],
+                })
             }
         }
 

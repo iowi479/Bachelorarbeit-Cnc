@@ -59,7 +59,7 @@ pub type StreamIdTypeUpper = String;
 /// This YANG grouping specifies the identification of a distinct
 /// point of attachment (interface) in a station (end station or
 /// Bridge).
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupInterfaceId {
     /// mac-address is the unique individual MAC address (IEEE Std 802) of
     /// the interface in the station (end station or Bridge). This MAC
@@ -124,7 +124,7 @@ pub struct GroupInterfaceId {
 /// the managed objects for Stream identification in IEEE Std 802.1CB.
 /// If inconsistency arises between this specification and IEEE Std
 /// 802.1CB, IEEE Std 802.1CB takes precedence.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupIeee802MacAddress {
     /// Destination MAC address.
     ///
@@ -155,7 +155,7 @@ pub struct GroupIeee802MacAddress {
 /// the managed objects for Stream identification in IEEE Std 802.1CB.
 /// If inconsistency arises between this specification and IEEE Std
 /// 802.1CB, IEEE Std 802.1CB takes precedence.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupIeee802VlanTag {
     /// Priority Code Point (PCP) field.
     ///
@@ -177,7 +177,7 @@ pub struct GroupIeee802VlanTag {
 /// the managed objects for Stream identification in IEEE Std 802.1CB.
 /// If inconsistency arises between this specification and IEEE Std
 /// 802.1CB, IEEE Std 802.1CB takes precedence.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupIpv4Tuple {
     /// Source IPv4 address.
     ///
@@ -218,7 +218,7 @@ pub struct GroupIpv4Tuple {
 /// the managed objects for Stream identification in IEEE Std 802.1CB.
 /// If inconsistency arises between this specification and IEEE Std
 /// 802.1CB, IEEE Std 802.1CB takes precedence.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupIpv6Tuple {
     /// Source IPv6 address.
     ///
@@ -257,7 +257,7 @@ pub struct GroupIpv6Tuple {
 ///
 /// The network (e.g. CNC) will merge all user-to-network-requirements
 /// for a Stream to ensure that all requirements are met.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupUserToNetworkRequirements {
     /// num-seamless-trees specifies the number of trees that the
     /// network will configure to deliver seamless redundancy for the
@@ -389,7 +389,7 @@ pub struct GroupUserToNetworkRequirements {
 /// end-station-interfaces). Use of multiple entries in
 /// end-station-interfaces is intended for network capabilities that
 /// span multiple interfaces (e.g. seamless redundancy).
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupInterfaceCapabilities {
     /// When vlan-tag-capable is true, the interface supports the
     /// ability to tag/untag frames using a Customer VLAN Tag (C-TAG of
@@ -467,7 +467,7 @@ pub struct GroupInterfaceCapabilities {
 /// One of the following choices is provided for each
 /// configuration value. Each container name acts as the case
 /// name for the choice.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ConfigValue {
     /// Source and destination MAC addresses that apply to the
     /// network side of the user/network boundary.
@@ -543,7 +543,7 @@ pub enum ConfigValue {
     /// nanoseconds after the start of the Talkers interval.
     TimeAwareOffset(u32),
 }
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ConfigListElement {
     /// This index is provided in order to provide a unique key per
     /// list entry. The value of index for each entry shall be
@@ -555,7 +555,7 @@ pub struct ConfigListElement {
     /// name for the choice.
     pub config_value: ConfigValue,
 }
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct InterfaceListElement {
     /// List of configuration values for the interface.
     pub config_list: Vec<ConfigListElement>,
@@ -567,7 +567,7 @@ pub struct InterfaceListElement {
 /// the Streams requirements. The interface-configuration meets the
 /// capabilities of the interface as provided in
 /// interface-capabilities.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupInterfaceConfiguration {
     /// A distinct configuration is provided for each interface in the
     /// Talker/Listener (even if multiple interfaces use the same
@@ -588,7 +588,7 @@ pub struct GroupInterfaceConfiguration {
 /// in the network. This rank is used to determine success/failure
 /// of Stream resource configuration, and it is unrelated to the
 /// Streams data.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct StreamRankContainer {
     /// The Rank is used by the network to decide which Streams can
     /// and cannot exist when TSN resources reach their limit. If a
@@ -622,7 +622,7 @@ pub struct StreamRankContainer {
 /// One of the following choices is provided for each field that
 /// the user knows. Each container name acts as the case name for
 /// the choice.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum DataFrameSpecificationElementType {
     /// IEEE 802 MAC addresses.
     Ieee802MacAddresses(GroupIeee802MacAddress),
@@ -657,7 +657,7 @@ pub enum DataFrameSpecificationElementType {
 /// This list is optional, and its absence indicates that Stream
 /// transformation is performed in the Talker and Listeners of this
 /// Stream (46.2.2 of IEEE Std 802.1Q-2022).
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DataFrameSpecificationElement {
     /// This index is provided in order to provide a unique key per
     /// list entry. The value of index for each entry shall be unique
@@ -689,7 +689,7 @@ pub struct DataFrameSpecificationElement {
 /// interval (StartOfNextInterval) is: StartOfNextInterval = N *
 /// interval where N is the smallest integer for which the
 /// relation StartOfNextInterval >= CurrentTime would be TRUE.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TrafficSpecificationInterval {
     /// intervals numerator.
     pub numerator: u32,
@@ -713,7 +713,7 @@ pub struct TrafficSpecificationInterval {
 /// 802.1Q-2022) specifies a valid implementation of a time-aware
 /// Talker, the time-aware container is intended to support
 /// alternate implementations of scheduling.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TimeAwareContainer {
     /// earliest-transmit-offset specifies the earliest offset
     /// within each interval at which the Talker is capable of
@@ -780,7 +780,7 @@ pub struct TimeAwareContainer {
 /// frames for the Stream. This is effectively the Talkers promise
 /// to the network. The network uses this traffic spec to allocate
 /// resources and adjust queue parameters in Bridges.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TrafficSpecificationContainer {
     /// This interval specifies the period of time in which the
     /// traffic specification cannot be exceeded. The traffic
@@ -860,7 +860,7 @@ pub struct TrafficSpecificationContainer {
 ///
 /// In the fully centralized model of TSN configuration, this grouping
 /// originates from the CUC, and is delivered to the CNC.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupTalker {
     /// Rank of this Stream's configuration relative to other Streams
     /// in the network. This rank is used to determine success/failure
@@ -936,7 +936,7 @@ pub struct GroupTalker {
 ///
 /// In the fully centralized model of TSN configuration, this grouping
 /// originates from the CUC, and is delivered to the CNC.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupListener {
     // TODO index needed... not in yang model
     pub index: u32,
@@ -976,7 +976,7 @@ pub struct GroupListener {
     pub interface_capabilities: GroupInterfaceCapabilities,
 }
 /// This is an enumeration for the status of the Streams Talker.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum TalkerStatus {
     /// No Talker detected.
     None = 0,
@@ -990,7 +990,7 @@ pub enum TalkerStatus {
 
 /// This is an enumeration for the status of the Streams
 /// Listener(s).
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ListenerStatus {
     /// No Listener detected.
     None = 0,
@@ -1008,7 +1008,7 @@ pub enum ListenerStatus {
 
 /// status-info provides information regarding the status of a
 /// Streams configuration in the network.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct StatusInfoContainer {
     /// This is an enumeration for the status of the Streams Talker.
     pub talker_status: TalkerStatus,
@@ -1039,7 +1039,7 @@ pub struct StatusInfoContainer {
 /// group-status-stream - container for Talker, using
 /// group-status-talker-listener - list for Listeners, using
 /// group-status-talker-listener
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupStatusStream {
     /// status-info provides information regarding the status of a
     /// Streams configuration in the network.
@@ -1064,7 +1064,7 @@ pub struct GroupStatusStream {
 ///
 /// In the fully centralized model of TSN configuration, this grouping
 /// originates from the CNC, and is delivered to the CUC.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupStatusTalkerListener {
     /// accumulated-latency provides the worst-case maximum latency
     /// that a single frame of the Stream can encounter along its

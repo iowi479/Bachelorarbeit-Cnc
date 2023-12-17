@@ -17,7 +17,7 @@ pub struct TsnUni {
 /// This list exists so CUCs can be associated with the Configuration
 /// Domain they are located in and can be used to restrict access to
 /// CUCs, e.g., by using standard mechanism as described in RFC 8341.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Domain {
     /// The Domain ID is a unique identifier of a Configuration
     /// Domain. It is used to identify the Configuration Domain a CUC
@@ -45,7 +45,7 @@ pub struct Domain {
 /// initially requested them and can be used to restrict access to
 /// Streams, e.g., by using standard mechanisms as described in RFC
 /// 8341.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Cuc {
     /// The CUC ID is a unique identifier of a CUC. It is used to
     /// identify the CUC that a Stream belongs to, i.e., that
@@ -66,7 +66,7 @@ pub struct Cuc {
 
 /// The stream-status indicates what status the Stream has in
 /// the CNC.
-#[derive(Serialize, Deserialize, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum StreamStatus {
     /// The Stream has been requested but has not yet been
     /// configured by the CNC.
@@ -90,7 +90,7 @@ pub enum StreamStatus {
 /// Stream ID and request originate from the CUC and is delivered
 /// to the CNC, while the configuration originates from the CNC
 /// and is delivered to the CUC.
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Stream {
     /// The Stream ID is a unique identifier of a Stream request
     /// and corresponding configuration. It is used to associate a
@@ -118,7 +118,7 @@ pub struct Stream {
 /// Stream (how/when transmitted) - Talker’s requirements from
 /// the network - TSN capabilities of the Talker’s
 /// interface(s).
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Talker {
     pub group_talker: tsn_types::GroupTalker,
     pub group_status_talker_listener: tsn_types::GroupStatusTalkerListener,
@@ -127,7 +127,7 @@ pub struct Talker {
 /// Each Listener list entry contains: - Listener’s
 /// requirements from the network - TSN capabilities of the
 /// Listener’s interface(s).
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Listener {
     /// This index is provided in order to provide a unique key
     /// per list entry.

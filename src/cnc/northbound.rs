@@ -182,13 +182,13 @@ impl MockUniAdapter {
 
 impl NorthboundAdapterInterface for MockUniAdapter {
     fn compute_streams_completed(&self, notification: NotificationContent) {
-        println!("[Northbound]-[MockUniAdapter] Notification: compute_stream_completed \n {notification:?}");
+        println!("[Northbound] Notification: compute_stream_completed \n {notification:?}");
     }
     fn configure_streams_completed(&self, notification: NotificationContent) {
-        println!("[Northbound]-[MockUniAdapter] Notification: configure_streams_completed \n {notification:?}");
+        println!("[Northbound] Notification: configure_streams_completed \n {notification:?}");
     }
     fn remove_streams_completed(&self, notification: NotificationContent) {
-        println!("[Northbound]-[MockUniAdapter] Notification: remove_streams_completed \n {notification:?}");
+        println!("[Northbound] Notification: remove_streams_completed \n {notification:?}");
     }
 
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {

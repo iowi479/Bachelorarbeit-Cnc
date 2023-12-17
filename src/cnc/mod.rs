@@ -108,7 +108,7 @@ impl Cnc {
     }
 
     fn execute_computation(cnc: Arc<Cnc>, computation_type: ComputationType) {
-        println!("[SCHEDULER]: preparing computation...");
+        println!("[SCHEDULER] preparing computation...");
 
         let topology: Topology = cnc.topology.get_topology();
         let domains: Vec<uni_types::Domain> = match computation_type {
@@ -125,20 +125,50 @@ impl Cnc {
             }
         };
 
-        println!("[SCHEDULER]: computing now...");
+        dbg!(&domains);
+
+        println!("[SCHEDULER] computing now...");
 
         let schedule = cnc.scheduler.compute_schedule(&topology, &domains);
 
-        println!("[SCHEDULER]: computation successfull");
+        println!("[SCHEDULER] computation successfull");
 
-        cnc.northbound.compute_streams_completed(Vec::new());
+        // TODO faild computations
+        let mut computed_notification: NotificationContent = Vec::new();
+        for domain in &domains {
+            let mut d = notification_types::Domain {
+                domain_id: domain.domain_id.clone(),
+                cucs: Vec::new(),
+            };
 
-        println!("[SCHEDULER]: configuring now...");
+            for cuc in &domain.cuc {
+                let mut c = notification_types::Cuc {
+                    cuc_id: cuc.cuc_id.clone(),
+                    streams: Vec::new(),
+                };
+
+                for stream in &cuc.stream {
+                    c.streams.push(notification_types::Stream {
+                        stream_id: stream.stream_id.clone(),
+                        failure_code: 0,
+                    })
+                }
+
+                d.cucs.push(c);
+            }
+
+            computed_notification.push(d);
+        }
+
+        cnc.northbound
+            .compute_streams_completed(computed_notification);
+
+        println!("[SCHEDULER] configuring now...");
 
         let failed_nodes = cnc.southbound.configure_network(&topology, &schedule);
         let failed_streams = get_failed_streams(&schedule, failed_nodes);
 
-        println!("[SCHEDULER]: configuring successfull");
+        println!("[SCHEDULER] configuring successfull");
 
         cnc.storage
             .set_streams_configured(&domains, &failed_streams);
