@@ -57,6 +57,145 @@ impl MockTopology {
         let mut paths: Vec<Path> = Vec::new();
 
         /*
+        For this Topology node (2) doesnt exist and thus will fail to be configured.
+
+        ------- Mock Topology -----
+                  (1) --- (2)
+                 /   \       \
+               [10] [11]    [12]
+        ---------------------------
+        */
+
+        nodes.push(NodeInformation {
+            id: 1,
+            ip: IpAddr::V4(Ipv4Addr::new(10, 2, 0, 1)),
+            endstation: NodeType::Bridge,
+            ports: Vec::new(),
+            configuration_params: Some(SSHConfigurationParams {
+                ip: String::from("10.2.0.1"),
+                port: 830,
+                username: String::from("admin"),
+                password: String::from("admin"),
+            }),
+        });
+
+        nodes.push(NodeInformation {
+            id: 2,
+            ip: IpAddr::V4(Ipv4Addr::new(10, 2, 0, 2)),
+            endstation: NodeType::Bridge,
+            ports: Vec::new(),
+            configuration_params: Some(SSHConfigurationParams {
+                ip: String::from("10.2.0.2"),
+                port: 830,
+                username: String::from(""),
+                password: String::from(""),
+            }),
+        });
+
+        nodes.push(NodeInformation {
+            id: 10,
+            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 10)),
+            endstation: NodeType::EndStation,
+            ports: Vec::new(),
+            configuration_params: None,
+        });
+
+        nodes.push(NodeInformation {
+            id: 11,
+            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 11)),
+            endstation: NodeType::EndStation,
+            ports: Vec::new(),
+            configuration_params: None,
+        });
+        nodes.push(NodeInformation {
+            id: 12,
+            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 12)),
+            endstation: NodeType::EndStation,
+            ports: Vec::new(),
+            configuration_params: None,
+        });
+
+        connections.push(Connection {
+            id: 0,
+            a: ConnectionInterface {
+                node_id: 10,
+                port_name: String::from("eth0"),
+            },
+            b: ConnectionInterface {
+                node_id: 1,
+                port_name: String::from("sw0p2"),
+            },
+        });
+
+        connections.push(Connection {
+            id: 1,
+            a: ConnectionInterface {
+                node_id: 11,
+                port_name: String::from("eth1"),
+            },
+            b: ConnectionInterface {
+                node_id: 1,
+                port_name: String::from("sw0p3"),
+            },
+        });
+
+        connections.push(Connection {
+            id: 2,
+            a: ConnectionInterface {
+                node_id: 1,
+                port_name: String::from("sw0p4"),
+            },
+            b: ConnectionInterface {
+                node_id: 2,
+                port_name: String::from("sw0p2"),
+            },
+        });
+
+        connections.push(Connection {
+            id: 3,
+            a: ConnectionInterface {
+                node_id: 2,
+                port_name: String::from("sw0p3"),
+            },
+            b: ConnectionInterface {
+                node_id: 12,
+                port_name: String::from("eth0"),
+            },
+        });
+
+        paths.push(Path {
+            node_a_id: 10,
+            node_b_id: 11,
+            hops: vec![1],
+        });
+        paths.push(Path {
+            node_a_id: 10,
+            node_b_id: 12,
+            hops: vec![1, 2],
+        });
+        paths.push(Path {
+            node_a_id: 11,
+            node_b_id: 12,
+            hops: vec![1, 2],
+        });
+
+        let topology: Topology = Topology {
+            nodes,
+            connections,
+            paths: Some(paths),
+        };
+
+        Self {
+            topology: RwLock::new(topology),
+            cnc: Weak::default(),
+        }
+    }
+    pub fn new_functioning() -> Self {
+        let mut nodes: Vec<NodeInformation> = Vec::new();
+        let mut connections: Vec<Connection> = Vec::new();
+        let mut paths: Vec<Path> = Vec::new();
+
+        /*
         --- Mock Topology -----
                   (1)
                  /   \
