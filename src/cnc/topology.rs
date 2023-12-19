@@ -11,11 +11,16 @@ use std::{
 };
 
 pub trait TopologyControllerInterface {
+    /// on a detected topology change, this gets called.
+    /// Any actions the cnc should take have to be called in here...
     fn notify_topology_changed(&self);
 }
 
 pub trait TopologyAdapterInterface {
+    /// returnes to currently available Topology
     fn get_topology(&self) -> Topology;
+
+    /// returns information about the provided node.
     fn get_node_information(&self, id: u32) -> Option<NodeInformation>;
 
     /// running this component continously
