@@ -9,7 +9,7 @@ fn main() {
     let northbound = MockUniAdapter::new(String::from("test-cuc-id"));
     let southbound = NetconfAdapter::new();
     let storage = FileStorage::new();
-    let topology = MockTopology::new();
+    let topology = MockTopology::new_failing();
     let scheduler = IPVSDsyncTSNScheduling::new();
 
     // Configuration for CNC

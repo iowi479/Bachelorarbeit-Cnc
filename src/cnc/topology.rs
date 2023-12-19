@@ -51,7 +51,7 @@ pub struct MockTopology {
 }
 
 impl MockTopology {
-    pub fn new() -> Self {
+    pub fn new_failing() -> Self {
         let mut nodes: Vec<NodeInformation> = Vec::new();
         let mut connections: Vec<Connection> = Vec::new();
         let mut paths: Vec<Path> = Vec::new();
