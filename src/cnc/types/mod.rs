@@ -69,7 +69,7 @@ pub mod topology {
     #[derive(Clone)]
     pub struct NodeInformation {
         pub id: u32,
-        pub ip: std::net::IpAddr,
+        pub mac_addresses_interfaces: Vec<String>,
         pub endstation: NodeType,
         pub configuration_params: Option<SSHConfigurationParams>,
         pub ports: Vec<Port>,
@@ -86,6 +86,7 @@ pub mod topology {
     #[derive(Clone, Debug)]
     pub struct Port {
         pub name: String,
+        pub mac_address: String,
         pub delays: Vec<super::tsn_types::BridgePortDelays>,
         pub tick_granularity: u32,
     }
@@ -110,14 +111,15 @@ pub mod scheduling {
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct Config {
+        pub port: PortConfiguration,
         pub node_id: u32,
-        pub ports: Vec<PortConfiguration>,
-        pub for_streams: Vec<String>,
+        pub affected_streams: Vec<String>,
     }
 
     #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct PortConfiguration {
         pub name: String,
+        pub mac_address: String,
         pub config: super::sched_types::ConfigurableGateParameterTableEntry,
     }
 

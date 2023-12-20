@@ -7,6 +7,8 @@ use std::fs::File;
 use std::io::{Error, Read, Write};
 use std::sync::{RwLock, Weak};
 
+// TODO when modifying a stream it  needs to be set as modified!!! nowhere done yet
+
 /// Any StorageComponent that should be used with the CNC must implement this trait.
 pub trait StorageAdapterInterface {
     /// This gets called when the CNC is created and linked via this.set_cnc_ref(...);
@@ -28,6 +30,8 @@ pub trait StorageAdapterInterface {
 
     fn set_stream(&self, cuc_id: &String, stream: &Stream);
     fn set_streams(&self, cuc_id: &String, streams: &Vec<Stream>);
+
+    fn modify_streams(&self, domains: &Vec<uni_types::Domain>);
 
     /// This gets called after the configuration of the requested Streams was successfull.
     fn set_streams_configured(
@@ -488,5 +492,35 @@ impl StorageAdapterInterface for FileStorage {
                 }
             }
         }
+
+        drop(domain_lock);
+        self.save_domains();
+    }
+
+    fn modify_streams(&self, domains: &Vec<uni_types::Domain>) {
+        let mut domain_lock = self.domains.write().unwrap();
+        for change_domain in domains.iter() {
+            for domain in domain_lock.iter_mut() {
+                if domain.domain_id == change_domain.domain_id {
+                    for change_cuc in change_domain.cuc.iter() {
+                        for cuc in domain.cuc.iter_mut() {
+                            if cuc.cuc_id == change_cuc.cuc_id {
+                                for change_stream in change_cuc.stream.iter() {
+                                    for stream in cuc.stream.iter_mut() {
+                                        if stream.stream_id == change_stream.stream_id {
+                                            // replace old stream
+                                            *stream = change_stream.clone();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        drop(domain_lock);
+        self.save_domains();
     }
 }

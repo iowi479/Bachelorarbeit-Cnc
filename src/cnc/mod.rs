@@ -5,6 +5,9 @@ pub mod storage;
 pub mod topology;
 pub mod types;
 
+use crate::cnc::middleware::types::ComputationResult;
+
+use self::middleware::types::FailedStream;
 use self::middleware::SchedulerAdapterInterface;
 use self::northbound::{NorthboundAdapterInterface, NorthboundControllerInterface};
 use self::southbound::SouthboundAdapterInterface;
@@ -14,7 +17,7 @@ use self::types::computation::ComputationType;
 use self::types::notification_types::{self, NotificationContent};
 use self::types::scheduling::Schedule;
 use self::types::topology::Topology;
-use self::types::tsn_types::GroupInterfaceId;
+use self::types::tsn_types::StreamIdTypeUpper;
 use self::types::uni_types::{self, Stream};
 use std::collections::HashSet;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -40,6 +43,8 @@ pub struct Cnc {
 }
 
 impl Cnc {
+    /// This runs the CNC continuosly unless Components stop running.
+    /// This function call is blocking until the CNC stops operation.
     pub fn run(
         id: u32,
         domain: String,
@@ -110,56 +115,73 @@ impl Cnc {
     fn execute_computation(cnc: Arc<Cnc>, computation_type: ComputationType) {
         println!("[SCHEDULER] preparing computation...");
 
-        let topology: Topology = cnc.topology.get_topology();
-        let domains: Vec<uni_types::Domain> = match computation_type {
-            ComputationType::All(request_domains) => {
-                cnc.storage.get_streams_in_domains(request_domains)
-            }
+        let topology = cnc.topology.get_topology();
+        let domains = cnc.get_domains_to_compute(computation_type);
 
-            ComputationType::PlannedAndModified(request_domains) => cnc
-                .storage
-                .get_planned_and_modified_streams_in_domains(request_domains),
+        println!("[SCHEDULER] computing schedule now...");
 
-            ComputationType::List(request_domains) => {
-                cnc.storage.get_streams_in_domains(request_domains)
-            }
-        };
+        let computation_result = cnc.scheduler.compute_schedule(&topology, &domains);
 
-        dbg!(&domains);
+        println!(
+            "[SCHEDULER] computation finished - with {} streams failed",
+            computation_result.failed_streams.len()
+        );
 
-        println!("[SCHEDULER] computing now...");
-
-        let schedule = cnc.scheduler.compute_schedule(&topology, &domains);
-
-        println!("[SCHEDULER] computation successfull");
-
-        // TODO faild computations
+        // TODO handle failed interfaces...
+        // sets interface configurations of talker/listeners to storage
+        cnc.storage.modify_streams(&computation_result.domains);
         let computed_notification: NotificationContent =
-            create_notification(&domains, &HashSet::new());
+            create_computation_notification(&domains, &computation_result.failed_streams);
         cnc.northbound
             .compute_streams_completed(computed_notification);
 
         println!("[SCHEDULER] configuring now...");
 
-        let failed_nodes = cnc.southbound.configure_network(&topology, &schedule);
-        let failed_streams = get_failed_streams(&schedule, failed_nodes);
+        let failed_interfaces = cnc
+            .southbound
+            .configure_network(&topology, &computation_result.schedule);
 
-        println!("[SCHEDULER] configuring successfull");
+        println!(
+            "[SCHEDULER] configuring finished - with {} failed interfaces",
+            failed_interfaces.interfaces.len()
+        );
 
-        cnc.storage
-            .set_streams_configured(&domains, &failed_streams);
-        cnc.storage.set_configs(&schedule.configs);
+        // TODO rework these...
+        // let failed_streams = get_failed_streams(&computation_result, &failed_nodes);
+        // cnc.storage
+        //     .set_streams_configured(&domains, &failed_streams);
+        // cnc.storage.set_configs(&computation_result.configs);
 
-        let notification: NotificationContent = create_notification(&domains, &failed_streams);
-        cnc.northbound.configure_streams_completed(notification);
+        // let notification: NotificationContent = create_configuration_notification(&domains, &failed_streams);
+        // set_failed_streams_in_storage(&domains, &failed_nodes, &topology, &failed_streams);
+        // cnc.northbound.configure_streams_completed(notification);
+    }
+
+    fn get_domains_to_compute(&self, computation: ComputationType) -> Vec<uni_types::Domain> {
+        let domains: Vec<uni_types::Domain> = match computation {
+            ComputationType::All(request_domains) => {
+                self.storage.get_streams_in_domains(request_domains)
+            }
+
+            ComputationType::PlannedAndModified(request_domains) => self
+                .storage
+                .get_planned_and_modified_streams_in_domains(request_domains),
+
+            ComputationType::List(request_domains) => {
+                self.storage.get_streams_in_domains(request_domains)
+            }
+        };
+
+        return domains;
     }
 }
 
-fn create_notification(
+fn create_computation_notification(
     domains: &Vec<uni_types::Domain>,
-    failed_streams: &HashSet<String>,
+    failed_streams: &Vec<FailedStream>,
 ) -> NotificationContent {
     let mut notification: NotificationContent = Vec::new();
+
     for domain in domains.iter() {
         let mut notification_domain = notification_types::Domain {
             domain_id: domain.domain_id.clone(),
@@ -175,7 +197,13 @@ fn create_notification(
             for stream in cuc.stream.iter() {
                 let mut failure_code: u8 = 0;
 
-                if failed_streams.get(&stream.stream_id).is_some() {
+                let failed_in_computation = failed_streams.iter().find(|x| {
+                    x.stream_id == stream.stream_id
+                        && x.cuc_id == cuc.cuc_id
+                        && x.domain_id == domain.domain_id
+                });
+
+                if failed_in_computation.is_some() {
                     failure_code = 1;
                 }
 
@@ -195,18 +223,49 @@ fn create_notification(
     notification
 }
 
-fn get_failed_streams(schedule: &Schedule, failed_nodes: HashSet<u32>) -> HashSet<String> {
-    let mut failed_streams: HashSet<String> = HashSet::new();
+fn create_configuration_notification(
+    domains: &Vec<uni_types::Domain>,
+    failed_interfaces: &Vec<southbound::types::FailedInterface>,
+) -> NotificationContent {
+    let mut notification: NotificationContent = Vec::new();
 
-    for config in &schedule.configs {
-        if failed_nodes.get(&config.node_id).is_some() {
-            for stream_id in &config.for_streams {
-                failed_streams.insert(stream_id.clone());
+    for domain in domains.iter() {
+        let mut notification_domain = notification_types::Domain {
+            domain_id: domain.domain_id.clone(),
+            cucs: Vec::new(),
+        };
+
+        for cuc in domain.cuc.iter() {
+            let mut notification_cuc = notification_types::Cuc {
+                cuc_id: cuc.cuc_id.clone(),
+                streams: Vec::new(),
+            };
+
+            for stream in cuc.stream.iter() {
+                let mut failure_code: u8 = 0;
+
+                let failed_with_some_interface = failed_interfaces
+                    .iter()
+                    .find(|x| x.affected_streams.contains(&stream.stream_id));
+
+                if failed_with_some_interface.is_some() {
+                    failure_code = 1;
+                }
+
+                let notification_stream = notification_types::Stream {
+                    stream_id: stream.stream_id.clone(),
+                    failure_code,
+                };
+
+                notification_cuc.streams.push(notification_stream);
             }
-        }
-    }
 
-    failed_streams
+            notification_domain.cucs.push(notification_cuc);
+        }
+
+        notification.push(notification_domain);
+    }
+    notification
 }
 
 impl NorthboundControllerInterface for Cnc {
@@ -260,60 +319,71 @@ impl NorthboundControllerInterface for Cnc {
         &self,
         cuc_id: &String,
         request: Vec<(
+            StreamIdTypeUpper,
             types::tsn_types::GroupTalker,
             Vec<types::tsn_types::GroupListener>,
         )>,
     ) {
         // TODO parse request and add to storage
         // TODO status groups and normal groups. When does everthig get created
+        let mut streams: Vec<Stream> = Vec::new();
 
-        let s: Stream = Stream {
-            stream_id: String::from("00-00-00-00-00-00:00-01"),
-            stream_status: types::uni_types::StreamStatus::Planned,
-            talker: types::uni_types::Talker {
-                group_talker: request[0].0.clone(),
-                group_status_talker_listener: types::tsn_types::GroupStatusTalkerListener {
-                    accumulated_latency: 0,
-                    interface_configuration: types::tsn_types::GroupInterfaceConfiguration {
-                        interface_list: vec![types::tsn_types::InterfaceListElement {
-                            config_list: vec![types::tsn_types::ConfigListElement {
-                                index: 0,
-                                config_value: types::tsn_types::ConfigValue::Ieee802MacAddresses(
-                                    types::tsn_types::GroupIeee802MacAddress {
-                                        destination_mac_adress: String::from("00-00-00-0F-00-00"),
-                                        source_mac_adress: String::from("00-00-00-00-00-01"),
-                                    },
-                                ),
-                            }],
-                            group_interface_id: GroupInterfaceId {
-                                interface_name: String::new(),
-                                mac_address: String::new(),
-                            },
-                        }],
+        for requested_stream in request {
+            let s = Stream {
+                stream_id: requested_stream.0,
+                stream_status: types::uni_types::StreamStatus::Planned,
+                talker: types::uni_types::Talker {
+                    group_talker: requested_stream.1.clone(),
+                    group_status_talker_listener: types::tsn_types::GroupStatusTalkerListener {
+                        accumulated_latency: 0,
+                        interface_configuration: types::tsn_types::GroupInterfaceConfiguration {
+                            interface_list: Vec::new(),
+                            // TODO what to do with this group status talker listener? sending to cuc?
+                            // vec![types::tsn_types::InterfaceListElement {
+                            //     config_list: vec![types::tsn_types::ConfigListElement {
+                            //         index: 0,
+                            //         config_value:
+                            //             types::tsn_types::ConfigValue::Ieee802MacAddresses(
+                            //                 types::tsn_types::GroupIeee802MacAddress {
+                            //                     destination_mac_adress: String::from(
+                            //                         "00-00-00-0F-00-00",
+                            //                     ),
+                            //                     source_mac_adress: String::from(
+                            //                         "00-00-00-00-00-01",
+                            //                     ),
+                            //                 },
+                            //             ),
+                            //     }],
+                            //     group_interface_id: GroupInterfaceId {
+                            //         interface_name: String::new(),
+                            //         mac_address: String::new(),
+                            //     },
+                            // }],
+                        },
                     },
                 },
-            },
-            listener: vec![types::uni_types::Listener {
-                index: 0,
-                group_listener: request[0].1[0].clone(),
-                group_status_talker_listener: types::tsn_types::GroupStatusTalkerListener {
-                    accumulated_latency: 0,
-                    interface_configuration: types::tsn_types::GroupInterfaceConfiguration {
-                        interface_list: Vec::new(),
+                listener: vec![types::uni_types::Listener {
+                    index: 0,
+                    group_listener: requested_stream.2[0].clone(),
+                    group_status_talker_listener: types::tsn_types::GroupStatusTalkerListener {
+                        accumulated_latency: 0,
+                        interface_configuration: types::tsn_types::GroupInterfaceConfiguration {
+                            interface_list: Vec::new(),
+                        },
                     },
+                }],
+                group_status_stream: types::tsn_types::GroupStatusStream {
+                    status_info: types::tsn_types::StatusInfoContainer {
+                        talker_status: types::tsn_types::TalkerStatus::None,
+                        listener_status: types::tsn_types::ListenerStatus::None,
+                        failure_code: 0,
+                    },
+                    failed_interfaces: Vec::new(),
                 },
-            }],
-            group_status_stream: types::tsn_types::GroupStatusStream {
-                status_info: types::tsn_types::StatusInfoContainer {
-                    talker_status: types::tsn_types::TalkerStatus::None,
-                    listener_status: types::tsn_types::ListenerStatus::None,
-                    failure_code: 0,
-                },
-                failed_interfaces: Vec::new(),
-            },
-        };
-
-        self.storage.set_stream(cuc_id, &s);
+            };
+            streams.push(s);
+        }
+        self.storage.set_streams(cuc_id, &streams);
     }
 }
 

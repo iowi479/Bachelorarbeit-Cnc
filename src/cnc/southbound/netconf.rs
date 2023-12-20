@@ -32,7 +32,7 @@ const YANG_MODULES: &'static [YangModule] = &[
 ];
 
 pub fn get_netconf_connection(
-    config_params: SSHConfigurationParams,
+    config_params: &SSHConfigurationParams,
 ) -> Result<NetconfClient, NetconfClientError> {
     let mut client = NetconfClient::new(
         config_params.ip.as_str(),
@@ -44,7 +44,7 @@ pub fn get_netconf_connection(
     client.connect()?;
     client.send_hello()?;
 
-    Ok(client)
+    return Ok(client);
 }
 
 /// this runs a <get-config> rpc on the netconf-client. This will provied all configurable
@@ -80,118 +80,116 @@ pub fn get_config_interfaces(
     )
     .expect("couldnt parse data");
 
-    Ok(dtree)
+    return Ok(dtree);
 }
 
 /// the provided configurations will be loaded into the given dtree. If the nodes dont already exist,
 /// they will be created. If they exist with different values, they will be overriden.
-pub fn put_config_in_dtree(dtree: &mut DataTree, config: &Vec<PortConfiguration>) {
-    for port_configuration in config {
-        let port_xpath = format!(
-            "/ietf-interfaces:interfaces/interface[name='{}']/ieee802-dot1q-sched:gate-parameters",
-            port_configuration.name
-        );
-        let config = &port_configuration.config;
+pub fn put_config_in_dtree(dtree: &mut DataTree, port_configuration: &PortConfiguration) {
+    let port_xpath = format!(
+        "/ietf-interfaces:interfaces/interface[name='{}']/ieee802-dot1q-sched:gate-parameters",
+        port_configuration.name
+    );
+    let config = &port_configuration.config;
+
+    put_gate_parameters_in_dtree(
+        dtree,
+        port_xpath.clone(),
+        "/gate-enabled",
+        config.gate_enable.to_string().as_str(),
+    );
+
+    put_gate_parameters_in_dtree(
+        dtree,
+        port_xpath.clone(),
+        "/admin-gate-states",
+        config.admin_gate_states.to_string().as_str(),
+    );
+
+    // admin-control-list
+    for (i, gce) in config.admin_control_list.iter().enumerate() {
+        let operation_name = match gce.operation_name {
+            crate::cnc::types::sched_types::GateControlOperation::SetGateStates => {
+                "set-gate-states"
+            }
+            _ => panic!("not supported"),
+        };
+
+        let path_prefix = format!("/admin-control-list[index={}]", i);
 
         put_gate_parameters_in_dtree(
             dtree,
             port_xpath.clone(),
-            "/gate-enabled",
-            config.gate_enable.to_string().as_str(),
-        );
-
-        put_gate_parameters_in_dtree(
-            dtree,
-            port_xpath.clone(),
-            "/admin-gate-states",
-            config.admin_gate_states.to_string().as_str(),
-        );
-
-        // admin-control-list
-        for (i, gce) in config.admin_control_list.iter().enumerate() {
-            let operation_name = match gce.operation_name {
-                crate::cnc::types::sched_types::GateControlOperation::SetGateStates => {
-                    "set-gate-states"
-                }
-                _ => panic!("not supported"),
-            };
-
-            let path_prefix = format!("/admin-control-list[index={}]", i);
-
-            put_gate_parameters_in_dtree(
-                dtree,
-                port_xpath.clone(),
-                (path_prefix.clone() + "/operation-name").as_str(),
-                operation_name,
-            );
-            put_gate_parameters_in_dtree(
-                dtree,
-                port_xpath.clone(),
-                (path_prefix.clone() + "/sgs-params/gate-states-value").as_str(),
-                gce.gate_state_value.to_string().as_str(),
-            );
-            put_gate_parameters_in_dtree(
-                dtree,
-                port_xpath.clone(),
-                (path_prefix.clone() + "/sgs-params/time-interval-value").as_str(),
-                gce.time_interval_value.to_string().as_str(),
-            );
-        }
-
-        put_gate_parameters_in_dtree(
-            dtree,
-            port_xpath.clone(),
-            "/admin-control-list-length",
-            config.admin_control_list.len().to_string().as_str(),
-        );
-        // ---
-
-        // admin-cycle-time
-        let cycle_time = config.admin_cycle_time;
-        put_gate_parameters_in_dtree(
-            dtree,
-            port_xpath.clone(),
-            "/admin-cycle-time/numerator",
-            cycle_time.0.to_string().as_str(),
+            (path_prefix.clone() + "/operation-name").as_str(),
+            operation_name,
         );
         put_gate_parameters_in_dtree(
             dtree,
             port_xpath.clone(),
-            "/admin-cycle-time/denominator",
-            cycle_time.1.to_string().as_str(),
-        );
-        // ---
-
-        // admin-base-time
-        let basetime = config.admin_base_time;
-        put_gate_parameters_in_dtree(
-            dtree,
-            port_xpath.clone(),
-            "/admin-base-time/seconds",
-            basetime.0.to_string().as_str(),
+            (path_prefix.clone() + "/sgs-params/gate-states-value").as_str(),
+            gce.gate_state_value.to_string().as_str(),
         );
         put_gate_parameters_in_dtree(
             dtree,
             port_xpath.clone(),
-            "/admin-base-time/fractional-seconds",
-            basetime.1.to_string().as_str(),
-        );
-        // ---
-
-        put_gate_parameters_in_dtree(
-            dtree,
-            port_xpath.clone(),
-            "/admin-cycle-time-extension",
-            config.admin_cycle_time_extension.to_string().as_str(),
-        );
-
-        put_gate_parameters_in_dtree(
-            dtree,
-            port_xpath.clone(),
-            "/config-change",
-            config.config_change.to_string().as_str(),
+            (path_prefix.clone() + "/sgs-params/time-interval-value").as_str(),
+            gce.time_interval_value.to_string().as_str(),
         );
     }
+
+    put_gate_parameters_in_dtree(
+        dtree,
+        port_xpath.clone(),
+        "/admin-control-list-length",
+        config.admin_control_list.len().to_string().as_str(),
+    );
+    // ---
+
+    // admin-cycle-time
+    let cycle_time = config.admin_cycle_time;
+    put_gate_parameters_in_dtree(
+        dtree,
+        port_xpath.clone(),
+        "/admin-cycle-time/numerator",
+        cycle_time.0.to_string().as_str(),
+    );
+    put_gate_parameters_in_dtree(
+        dtree,
+        port_xpath.clone(),
+        "/admin-cycle-time/denominator",
+        cycle_time.1.to_string().as_str(),
+    );
+    // ---
+
+    // admin-base-time
+    let basetime = config.admin_base_time;
+    put_gate_parameters_in_dtree(
+        dtree,
+        port_xpath.clone(),
+        "/admin-base-time/seconds",
+        basetime.0.to_string().as_str(),
+    );
+    put_gate_parameters_in_dtree(
+        dtree,
+        port_xpath.clone(),
+        "/admin-base-time/fractional-seconds",
+        basetime.1.to_string().as_str(),
+    );
+    // ---
+
+    put_gate_parameters_in_dtree(
+        dtree,
+        port_xpath.clone(),
+        "/admin-cycle-time-extension",
+        config.admin_cycle_time_extension.to_string().as_str(),
+    );
+
+    put_gate_parameters_in_dtree(
+        dtree,
+        port_xpath.clone(),
+        "/config-change",
+        config.config_change.to_string().as_str(),
+    );
 }
 
 /// puts the in path specified node at xpath into the dtree. The value to insert can be provided as well.
@@ -269,7 +267,7 @@ pub fn get_interface_data(
     )
     .expect("couldnt parse data");
 
-    Ok(dtree)
+    return Ok(dtree);
 }
 
 /// Initialize context for working with the yang models. This only gets called on startup.
@@ -285,7 +283,7 @@ pub fn create_yang_context() -> Arc<Context> {
             .expect("Failed to load module");
     }
 
-    Arc::new(ctx)
+    return Arc::new(ctx);
 }
 
 fn interface_name_from_xpath(xpath: &str) -> String {
@@ -318,17 +316,42 @@ pub fn get_port_delays(dtree: &DataTree) -> Vec<Port> {
 
         let mut port = Port {
             name,
+            mac_address: String::new(),
             delays: Vec::new(),
-            tick_granularity: 3200, // TODO actually request this... should already be in the dtree... in gate-parameters
+            tick_granularity: 0,
         };
 
-        for bpdnode in dnode
+        for address_node in dnode
+            .find_xpath((path.clone() + "/bridge-port/address").as_str())
+            .expect("no address field found")
+        {
+            if let Some(value) = address_node.value() {
+                match value {
+                    DataValue::Other(v) => port.mac_address = v,
+                    _ => eprintln!("found an unexpected node in dtree"),
+                }
+            }
+        }
+
+        for tick_node in dnode
+            .find_xpath((path.clone() + "/gate-parameters/tick-granularity").as_str())
+            .expect("no tick-granularity field found")
+        {
+            if let Some(value) = tick_node.value() {
+                match value {
+                    DataValue::Uint32(tick) => port.tick_granularity = tick,
+                    _ => eprintln!("found an unexpected node in dtree"),
+                }
+            }
+        }
+
+        for bpd_node in dnode
             .find_xpath((path + "/bridge-port/bridge-port-delays").as_str())
             .expect("no bpd nodes found")
         {
             let mut delays = BridgePortDelays::new();
 
-            for child_node in bpdnode.children() {
+            for child_node in bpd_node.children() {
                 let path = child_node.path();
                 let node_name = last_node_name_from_xpath(&path);
 
@@ -361,5 +384,5 @@ pub fn get_port_delays(dtree: &DataTree) -> Vec<Port> {
         ports.push(port);
     }
 
-    ports
+    return ports;
 }

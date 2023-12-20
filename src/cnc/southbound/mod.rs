@@ -1,25 +1,36 @@
 use self::netconf::{create_yang_context, get_config_interfaces, put_config_in_dtree};
-use super::types::scheduling::Schedule;
+use self::types::{FailedInterface, FailedInterfaces};
+use super::types::scheduling::{PortConfiguration, Schedule};
 use super::types::topology::{Port, SSHConfigurationParams, Topology};
+use super::types::tsn_types::GroupInterfaceId;
 use super::Cnc;
 use crate::cnc::southbound::netconf::{
     edit_config_in_candidate, get_interface_data, get_netconf_connection, get_port_delays,
 };
+use netconf_client::errors::NetconfClientError;
 use netconf_client::netconf_client::NetconfClient;
-use std::collections::HashSet;
+use std::arch::x86_64;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::Weak;
 use yang2::context::Context;
 
 mod netconf;
-mod types;
+pub mod types;
 
 pub trait SouthboundControllerInterface {}
 pub trait SouthboundAdapterInterface {
     /// configures the network.
     ///
-    /// returns a list of node_ids. Each of the ids represents, that the configuration for this node failed.
-    fn configure_network(&self, topology: &Topology, schedule: &Schedule) -> HashSet<u32>;
+    /// if configurations failed, they are provided in the FailedInterfaces to handle on the cnc side.
+    fn configure_network(&self, topology: &Topology, schedule: &Schedule) -> FailedInterfaces;
+
+    /// this configures a node-port on the given client
+    fn configure_node(
+        &self,
+        client: &mut NetconfClient,
+        config: &PortConfiguration,
+    ) -> Result<(), NetconfClientError>;
 
     /// requests the bridge-delay parameter of a specific bridge
     fn retrieve_station_capibilities(&self, config_params: SSHConfigurationParams) -> Vec<Port>;
@@ -47,47 +58,66 @@ impl NetconfAdapter {
 }
 
 impl SouthboundAdapterInterface for NetconfAdapter {
-    fn configure_network(&self, topology: &Topology, schedule: &Schedule) -> HashSet<u32> {
-        let mut configured_nodes: Vec<(u32, NetconfClient)> = Vec::new();
-        let mut failed_nodes: HashSet<u32> = HashSet::new();
+    fn configure_network(&self, topology: &Topology, schedule: &Schedule) -> FailedInterfaces {
+        let mut configured_nodes: HashMap<u32, NetconfClient> = HashMap::new();
 
-        for config in schedule.configs.iter() {
-            if let Some(node) = topology.get_node(config.node_id) {
-                let config_params = node.configuration_params.clone().unwrap();
+        let mut failed_interfaces = FailedInterfaces {
+            interfaces: Vec::new(),
+        };
 
-                println!(
-                    "[Southbound] Connecting to {} via Netconf",
-                    &config_params.ip
-                );
+        for configuration in schedule.configs.iter() {
+            // check if connection is already established
+            if let Some(client) = configured_nodes.get_mut(&configuration.node_id) {
+                let config_result = self.configure_node(client, &configuration.port);
+                if config_result.is_ok() {
+                    continue;
+                }
+            } else {
+                let node = topology.get_node_from_id(configuration.node_id);
 
-                let connection_result = get_netconf_connection(config_params);
+                if let Some(node) = node {
+                    let config_params = node.configuration_params.unwrap();
 
-                match connection_result {
-                    Err(e) => eprintln!("[Southbound] error while connecting via netconf {e:?}"),
-                    Ok(mut client) => {
-                        println!("[Southbound] successfully connected to switch");
-                        if let Ok(mut netconf_configuration) =
-                            get_config_interfaces(&mut client, &self.yang_ctx)
-                        {
-                            // print_whole_datatree(&netconf_configuration);
-                            put_config_in_dtree(&mut netconf_configuration, &config.ports);
-                            // print_whole_datatree(&netconf_configuration);
+                    println!(
+                        "[Southbound] Connecting to {} via Netconf",
+                        &config_params.ip
+                    );
+
+                    match get_netconf_connection(&config_params) {
+                        Err(e) => {
+                            eprintln!("[Southbound] error while connecting via netconf {e:?}");
+                        }
+                        Ok(mut client) => {
                             let config_result =
-                                edit_config_in_candidate(&mut client, &netconf_configuration);
-
-                            match config_result {
-                                Err(e) => {
-                                    failed_nodes.insert(config.node_id);
-                                    eprintln!("[Southbound] failed while configuring {:?}", e)
-                                }
-                                Ok(_) => configured_nodes.push((config.node_id, client)),
+                                self.configure_node(&mut client, &configuration.port);
+                            if config_result.is_ok() {
+                                configured_nodes.insert(configuration.node_id, client);
+                                continue;
                             }
                         }
                     }
                 }
             }
+
+            // if the program gets here while not continuing, something went wrong while configuring
+            failed_interfaces.interfaces.push(FailedInterface {
+                node_id: configuration.node_id,
+                interface: GroupInterfaceId {
+                    interface_name: configuration.port.name.clone(),
+                    mac_address: configuration.port.mac_address.clone(),
+                },
+                affected_streams: configuration
+                    .affected_streams
+                    .iter()
+                    .map(|x| x.clone())
+                    .collect(),
+            });
         }
 
+        // TODO not here... maybe i cant remove admincontrollist entries. with my method yet. Test this...
+
+        // TODO do still commit even if not all were successfull?
+        let mut failed_nodes: HashSet<u32> = HashSet::new();
         if configured_nodes.len() == schedule.configs.len() {
             for (node_id, client) in configured_nodes.iter_mut() {
                 let commit_result = client.commit();
@@ -106,13 +136,21 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                     eprintln!("[Southbound] Error while closing connection... {:?}", e);
                 }
             }
+        } else {
+            eprintln!("[Southbound] not commiting since there where configuration failures...");
         }
 
-        failed_nodes.iter().map(|x| x.clone()).collect()
+        println!(
+            "[Southbound] {} nodes failed commit but where configured (if this is > 0 TODO fix this...)",
+            // TODO in case this is >0 all interfaces of that node need to be addedto dailed nodes.
+            failed_nodes.len()
+        );
+
+        return failed_interfaces;
     }
 
     fn retrieve_station_capibilities(&self, config_params: SSHConfigurationParams) -> Vec<Port> {
-        if let Ok(mut client) = get_netconf_connection(config_params) {
+        if let Ok(mut client) = get_netconf_connection(&config_params) {
             if let Ok(dtree) = get_interface_data(&mut client, &self.yang_ctx) {
                 if let Err(e) = client.close_session() {
                     eprintln!("[Southbound] Error while closing netconf session: {:?}", e);
@@ -130,5 +168,22 @@ impl SouthboundAdapterInterface for NetconfAdapter {
 
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
         self.cnc = cnc;
+    }
+
+    fn configure_node(
+        &self,
+        client: &mut NetconfClient,
+        port_configuration: &PortConfiguration,
+    ) -> Result<(), NetconfClientError> {
+        match get_config_interfaces(client, &self.yang_ctx) {
+            Ok(mut netconf_configuration) => {
+                // print_whole_datatree(&netconf_configuration);
+                put_config_in_dtree(&mut netconf_configuration, port_configuration);
+                // print_whole_datatree(&netconf_configuration);
+                let config_result = edit_config_in_candidate(client, &netconf_configuration);
+                return config_result;
+            }
+            Err(e) => return Err(e),
+        }
     }
 }

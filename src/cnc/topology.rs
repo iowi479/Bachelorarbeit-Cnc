@@ -4,7 +4,6 @@ use super::types::topology::{
 };
 use super::{Cnc, CNC_NOT_PRESENT};
 use std::{
-    net::{IpAddr, Ipv4Addr},
     sync::{RwLock, Weak},
     thread,
     time::Duration,
@@ -40,7 +39,7 @@ pub trait TopologyAdapterInterface {
 }
 
 impl Topology {
-    pub fn get_node(&self, node_id: u32) -> Option<NodeInformation> {
+    pub fn get_node_from_id(&self, node_id: u32) -> Option<NodeInformation> {
         for node in self.nodes.iter() {
             if node.id == node_id {
                 return Some(node.clone());
@@ -73,7 +72,11 @@ impl MockTopology {
 
         nodes.push(NodeInformation {
             id: 1,
-            ip: IpAddr::V4(Ipv4Addr::new(10, 2, 0, 1)),
+            mac_addresses_interfaces: vec![
+                String::from("00-60-65-82-c9-5b"),
+                String::from("00-60-65-82-c9-5c"),
+                String::from("00-60-65-82-c9-5d"),
+            ],
             endstation: NodeType::Bridge,
             ports: Vec::new(),
             configuration_params: Some(SSHConfigurationParams {
@@ -86,7 +89,10 @@ impl MockTopology {
 
         nodes.push(NodeInformation {
             id: 2,
-            ip: IpAddr::V4(Ipv4Addr::new(10, 2, 0, 2)),
+            mac_addresses_interfaces: vec![
+                String::from("00-10-02-00-02-02"),
+                String::from("00-10-02-00-02-03"),
+            ],
             endstation: NodeType::Bridge,
             ports: Vec::new(),
             configuration_params: Some(SSHConfigurationParams {
@@ -99,7 +105,7 @@ impl MockTopology {
 
         nodes.push(NodeInformation {
             id: 10,
-            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 10)),
+            mac_addresses_interfaces: vec![String::from("00-00-00-00-00-01")],
             endstation: NodeType::EndStation,
             ports: Vec::new(),
             configuration_params: None,
@@ -107,14 +113,14 @@ impl MockTopology {
 
         nodes.push(NodeInformation {
             id: 11,
-            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 11)),
+            mac_addresses_interfaces: vec![String::from("00-00-00-00-00-02")],
             endstation: NodeType::EndStation,
             ports: Vec::new(),
             configuration_params: None,
         });
         nodes.push(NodeInformation {
             id: 12,
-            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 12)),
+            mac_addresses_interfaces: vec![String::from("00-00-00-00-00-03")],
             endstation: NodeType::EndStation,
             ports: Vec::new(),
             configuration_params: None,
@@ -210,7 +216,11 @@ impl MockTopology {
 
         nodes.push(NodeInformation {
             id: 1,
-            ip: IpAddr::V4(Ipv4Addr::new(10, 2, 0, 1)),
+            mac_addresses_interfaces: vec![
+                String::from("00-60-65-82-c9-5b"),
+                String::from("00-60-65-82-c9-5c"),
+                String::from("00-60-65-82-c9-5d"),
+            ],
             endstation: NodeType::Bridge,
             ports: Vec::new(),
             configuration_params: Some(SSHConfigurationParams {
@@ -223,7 +233,7 @@ impl MockTopology {
 
         nodes.push(NodeInformation {
             id: 10,
-            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 10)),
+            mac_addresses_interfaces: vec![String::from("00-00-00-00-00-01")],
             endstation: NodeType::EndStation,
             ports: Vec::new(),
             configuration_params: None,
@@ -231,7 +241,7 @@ impl MockTopology {
 
         nodes.push(NodeInformation {
             id: 11,
-            ip: IpAddr::V4(Ipv4Addr::new(192, 168, 0, 11)),
+            mac_addresses_interfaces: vec![String::from("00-00-00-00-00-02")],
             endstation: NodeType::EndStation,
             ports: Vec::new(),
             configuration_params: None,
