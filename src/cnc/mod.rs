@@ -108,17 +108,17 @@ impl Cnc {
     }
 
     fn execute_computation(cnc: Arc<Cnc>, computation_type: ComputationType) {
-        println!("[SCHEDULER] preparing computation...");
+        println!("[Scheduler] preparing computation...");
 
         let topology = cnc.topology.get_topology();
         let domains = cnc.get_domains_to_compute(computation_type);
 
-        println!("[SCHEDULER] computing schedule now...");
+        println!("[Scheduler] computing schedule now...");
 
         let computation_result = cnc.scheduler.compute_schedule(&topology, &domains);
 
         println!(
-            "[SCHEDULER] computation finished - with {} streams failed",
+            "[Scheduler] computation finished - with {} streams failed",
             computation_result.failed_streams.len()
         );
 
@@ -130,14 +130,14 @@ impl Cnc {
         cnc.northbound
             .compute_streams_completed(computed_notification);
 
-        println!("[SCHEDULER] configuring now...");
+        println!("[Scheduler] configuring now...");
 
         let failed_interfaces = cnc
             .southbound
             .configure_network(&topology, &computation_result.schedule);
 
         println!(
-            "[SCHEDULER] configuring finished - with {} failed interfaces",
+            "[Scheduler] configuring finished - with {} failed interfaces",
             failed_interfaces.interfaces.len()
         );
 

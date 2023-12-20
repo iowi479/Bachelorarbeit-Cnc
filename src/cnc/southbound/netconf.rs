@@ -137,6 +137,12 @@ pub fn put_config_in_dtree(dtree: &mut DataTree, port_configuration: &PortConfig
         );
     }
 
+    if config.admin_control_list.len() == 0 {
+        // this should empty the list but not sure... test
+        // TODO does this work?
+        put_gate_parameters_in_dtree(dtree, port_xpath.clone(), "/admin-control-list", "");
+    }
+
     put_gate_parameters_in_dtree(
         dtree,
         port_xpath.clone(),

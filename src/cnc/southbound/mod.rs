@@ -7,9 +7,10 @@ use super::Cnc;
 use crate::cnc::southbound::netconf::{
     edit_config_in_candidate, get_interface_data, get_netconf_connection, get_port_delays,
 };
+use crate::cnc::types::scheduling::Config;
 use netconf_client::errors::NetconfClientError;
 use netconf_client::netconf_client::NetconfClient;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::Weak;
 use yang2::context::Context;
@@ -59,6 +60,7 @@ impl NetconfAdapter {
 impl SouthboundAdapterInterface for NetconfAdapter {
     fn configure_network(&self, topology: &Topology, schedule: &Schedule) -> FailedInterfaces {
         let mut configured_nodes: HashMap<u32, NetconfClient> = HashMap::new();
+        let mut node_configurations: HashMap<u32, Vec<Config>> = HashMap::new();
 
         let mut failed_interfaces = FailedInterfaces {
             interfaces: Vec::new(),
@@ -69,6 +71,10 @@ impl SouthboundAdapterInterface for NetconfAdapter {
             if let Some(client) = configured_nodes.get_mut(&configuration.node_id) {
                 let config_result = self.configure_node(client, &configuration.port);
                 if config_result.is_ok() {
+                    node_configurations
+                        .get_mut(&configuration.node_id)
+                        .unwrap()
+                        .push(configuration.clone());
                     continue;
                 }
             } else {
@@ -91,6 +97,8 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                                 self.configure_node(&mut client, &configuration.port);
                             if config_result.is_ok() {
                                 configured_nodes.insert(configuration.node_id, client);
+                                node_configurations
+                                    .insert(configuration.node_id, vec![configuration.clone()]);
                                 continue;
                             }
                         }
@@ -116,7 +124,6 @@ impl SouthboundAdapterInterface for NetconfAdapter {
         // TODO not here... maybe i cant remove admincontrollist entries. with my method yet. Test this...
 
         // TODO do still commit even if not all were successfull?
-        let mut failed_nodes: HashSet<u32> = HashSet::new();
         if configured_nodes.len() == schedule.configs.len() {
             for (node_id, client) in configured_nodes.iter_mut() {
                 let commit_result = client.commit();
@@ -126,8 +133,22 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                         println!("[Southbound] commit successful")
                     }
                     Err(e) => {
-                        failed_nodes.insert(node_id.clone());
                         eprintln!("[Southbound] error while committing: {e:?}");
+
+                        for config in node_configurations.get(node_id).unwrap() {
+                            failed_interfaces.interfaces.push(FailedInterface {
+                                node_id: node_id.clone(),
+                                interface: GroupInterfaceId {
+                                    interface_name: config.port.name.clone(),
+                                    mac_address: config.port.mac_address.clone(),
+                                },
+                                affected_streams: config
+                                    .affected_streams
+                                    .iter()
+                                    .map(|x| x.clone())
+                                    .collect(),
+                            });
+                        }
                     }
                 }
 
@@ -136,14 +157,8 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                 }
             }
         } else {
-            eprintln!("[Southbound] not commiting since there where configuration failures...");
+            eprintln!("[Southbound] not comitting since there where configuration failures...");
         }
-
-        println!(
-            "[Southbound] {} nodes failed commit but where configured (if this is > 0 TODO fix this...)",
-            // TODO in case this is >0 all interfaces of that node need to be addedto dailed nodes.
-            failed_nodes.len()
-        );
 
         return failed_interfaces;
     }
@@ -176,11 +191,8 @@ impl SouthboundAdapterInterface for NetconfAdapter {
     ) -> Result<(), NetconfClientError> {
         match get_config_interfaces(client, &self.yang_ctx) {
             Ok(mut netconf_configuration) => {
-                // print_whole_datatree(&netconf_configuration);
                 put_config_in_dtree(&mut netconf_configuration, port_configuration);
-                // print_whole_datatree(&netconf_configuration);
-                let config_result = edit_config_in_candidate(client, &netconf_configuration);
-                return config_result;
+                return edit_config_in_candidate(client, &netconf_configuration);
             }
             Err(e) => return Err(e),
         }
