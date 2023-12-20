@@ -1,5 +1,4 @@
 use self::types::ComputationResult;
-
 use super::types::sched_types::{
     ConfigurableGateParameterTableEntry, GateControlEntry, GateControlOperation,
 };
@@ -10,7 +9,6 @@ use super::types::tsn_types::{
 };
 use super::types::uni_types::Domain;
 use super::Cnc;
-use std::collections::HashMap;
 use std::{sync::Weak, thread, time::Duration};
 
 pub mod types;
@@ -59,8 +57,6 @@ impl IPVSDsyncTSNScheduling {
         let acc_latency = 50000;
 
         let mut domains = domains.clone(); // copy since we do modifications to it
-
-        let mut req_nodes: HashMap<u32, Vec<String>> = HashMap::new();
 
         for domain in domains.iter_mut() {
             for cuc in domain.cuc.iter_mut() {

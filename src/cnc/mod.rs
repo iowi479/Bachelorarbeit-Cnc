@@ -5,8 +5,6 @@ pub mod storage;
 pub mod topology;
 pub mod types;
 
-use crate::cnc::middleware::types::ComputationResult;
-
 use self::middleware::types::FailedStream;
 use self::middleware::SchedulerAdapterInterface;
 use self::northbound::{NorthboundAdapterInterface, NorthboundControllerInterface};
@@ -15,11 +13,8 @@ use self::storage::StorageAdapterInterface;
 use self::topology::{TopologyAdapterInterface, TopologyControllerInterface};
 use self::types::computation::ComputationType;
 use self::types::notification_types::{self, NotificationContent};
-use self::types::scheduling::Schedule;
-use self::types::topology::Topology;
 use self::types::tsn_types::StreamIdTypeUpper;
 use self::types::uni_types::{self, Stream};
-use std::collections::HashSet;
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Weak};
 

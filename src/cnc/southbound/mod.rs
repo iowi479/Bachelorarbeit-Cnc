@@ -9,7 +9,6 @@ use crate::cnc::southbound::netconf::{
 };
 use netconf_client::errors::NetconfClientError;
 use netconf_client::netconf_client::NetconfClient;
-use std::arch::x86_64;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::Weak;
