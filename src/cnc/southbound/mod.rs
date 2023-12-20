@@ -1,8 +1,8 @@
 use self::netconf::{create_yang_context, get_config_interfaces, put_config_in_dtree};
-use self::types::{FailedInterface, FailedInterfaces};
 use super::types::scheduling::{PortConfiguration, Schedule};
 use super::types::topology::{Port, SSHConfigurationParams, Topology};
 use super::types::tsn_types::GroupInterfaceId;
+use super::types::{FailedInterface, FailedInterfaces};
 use super::Cnc;
 use crate::cnc::southbound::netconf::{
     edit_config_in_candidate, get_interface_data, get_netconf_connection, get_port_delays,

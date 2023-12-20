@@ -1,6 +1,3 @@
-use crate::cnc::types::tsn_types::{GroupInterfaceId, StreamIdTypeUpper};
-use std::collections::HashSet;
-
 /// this is used to specify the yang-models that have to be loaded later.
 pub struct YangModule {
     pub name: &'static str,
@@ -28,17 +25,4 @@ impl YangModule {
             features,
         }
     }
-}
-
-/// This struct provides information about failed configurations
-pub struct FailedInterfaces {
-    pub interfaces: Vec<FailedInterface>,
-}
-
-/// This struct is provided for each interface that failed configuration.
-/// This Information is essential for the CNC to further configure streams.
-pub struct FailedInterface {
-    pub interface: GroupInterfaceId,
-    pub node_id: u32,
-    pub affected_streams: HashSet<StreamIdTypeUpper>,
 }

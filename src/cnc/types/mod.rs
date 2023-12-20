@@ -1,3 +1,11 @@
+use std::collections::HashSet;
+
+use self::{
+    scheduling::Schedule,
+    tsn_types::{GroupInterfaceId, StreamIdTypeUpper},
+    uni_types::Domain,
+};
+
 /// Rust-Types for YANG-Models
 ///
 /// Specific Types for the specified notifications.
@@ -135,4 +143,31 @@ pub mod computation {
         PlannedAndModified(super::uni_types::compute_streams::Input),
         List(super::uni_types::compute_streams::Input),
     }
+}
+
+/// This struct provides information about failed configurations
+pub struct FailedInterfaces {
+    pub interfaces: Vec<FailedInterface>,
+}
+
+/// This struct is provided for each interface that failed configuration.
+/// This Information is essential for the CNC to further configure streams.
+pub struct FailedInterface {
+    pub interface: GroupInterfaceId,
+    pub node_id: u32,
+    pub affected_streams: HashSet<StreamIdTypeUpper>,
+}
+
+pub struct ComputationResult {
+    pub schedule: Schedule,
+    pub domains: Vec<Domain>,
+    pub failed_streams: Vec<FailedStream>,
+}
+
+pub struct FailedStream {
+    pub stream_id: StreamIdTypeUpper,
+    pub cuc_id: String,
+    pub domain_id: String,
+    // TODO acutally here?
+    pub failure_code: u32,
 }

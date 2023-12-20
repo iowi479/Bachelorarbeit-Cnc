@@ -1,6 +1,6 @@
-use super::southbound::types::FailedInterfaces;
 use super::types::scheduling::Config;
 use super::types::uni_types::{self, compute_streams, Cuc, Stream, StreamStatus};
+use super::types::FailedInterfaces;
 use super::{Cnc, CNC_NOT_PRESENT};
 use rand::Rng;
 use std::collections::{HashMap, HashSet};

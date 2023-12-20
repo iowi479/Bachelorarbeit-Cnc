@@ -1,4 +1,3 @@
-use self::types::ComputationResult;
 use super::types::sched_types::{
     ConfigurableGateParameterTableEntry, GateControlEntry, GateControlOperation,
 };
@@ -8,10 +7,9 @@ use super::types::tsn_types::{
     ConfigListElement, ConfigValue, DataFrameSpecificationElementType, InterfaceListElement,
 };
 use super::types::uni_types::Domain;
+use super::types::ComputationResult;
 use super::Cnc;
 use std::{sync::Weak, thread, time::Duration};
-
-pub mod types;
 
 pub trait SchedulerAdapterInterface {
     fn compute_schedule(&self, topology: &Topology, domains: &Vec<Domain>) -> ComputationResult;
