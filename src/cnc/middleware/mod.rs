@@ -28,21 +28,6 @@ pub struct IPVSDsyncTSNScheduling {
     cnc: Weak<Cnc>,
 }
 
-fn find_node_id_from_mac(mac: &String, topology: &Topology) -> Option<u32> {
-    for node in topology.nodes.iter() {
-        if node
-            .mac_addresses_interfaces
-            .iter()
-            .find(|x| x == &mac)
-            .is_some()
-        {
-            return Some(node.id);
-        }
-    }
-
-    None
-}
-
 // TODO calling actual algorithm
 impl IPVSDsyncTSNScheduling {
     pub fn new() -> Self {

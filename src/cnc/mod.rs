@@ -8,6 +8,7 @@ pub mod types;
 use self::middleware::types::FailedStream;
 use self::middleware::SchedulerAdapterInterface;
 use self::northbound::{NorthboundAdapterInterface, NorthboundControllerInterface};
+use self::southbound::types::FailedInterfaces;
 use self::southbound::SouthboundAdapterInterface;
 use self::storage::StorageAdapterInterface;
 use self::topology::{TopologyAdapterInterface, TopologyControllerInterface};
@@ -116,6 +117,8 @@ impl Cnc {
         println!("[Scheduler] computing schedule now...");
 
         let computation_result = cnc.scheduler.compute_schedule(&topology, &domains);
+        cnc.storage
+            .set_configs(&computation_result.schedule.configs);
 
         println!(
             "[Scheduler] computation finished - with {} streams failed",
@@ -141,15 +144,12 @@ impl Cnc {
             failed_interfaces.interfaces.len()
         );
 
-        // TODO rework these...
-        // let failed_streams = get_failed_streams(&computation_result, &failed_nodes);
-        // cnc.storage
-        //     .set_streams_configured(&domains, &failed_streams);
-        // cnc.storage.set_configs(&computation_result.configs);
+        cnc.storage
+            .set_streams_configured(&domains, &failed_interfaces);
 
-        // let notification: NotificationContent = create_configuration_notification(&domains, &failed_streams);
-        // set_failed_streams_in_storage(&domains, &failed_nodes, &topology, &failed_streams);
-        // cnc.northbound.configure_streams_completed(notification);
+        let notification: NotificationContent =
+            create_configuration_notification(&domains, &failed_interfaces);
+        cnc.northbound.configure_streams_completed(notification);
     }
 
     fn get_domains_to_compute(&self, computation: ComputationType) -> Vec<uni_types::Domain> {
@@ -220,7 +220,7 @@ fn create_computation_notification(
 
 fn create_configuration_notification(
     domains: &Vec<uni_types::Domain>,
-    failed_interfaces: &Vec<southbound::types::FailedInterface>,
+    failed_interfaces: &FailedInterfaces,
 ) -> NotificationContent {
     let mut notification: NotificationContent = Vec::new();
 
@@ -240,6 +240,7 @@ fn create_configuration_notification(
                 let mut failure_code: u8 = 0;
 
                 let failed_with_some_interface = failed_interfaces
+                    .interfaces
                     .iter()
                     .find(|x| x.affected_streams.contains(&stream.stream_id));
 

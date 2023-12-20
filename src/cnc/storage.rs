@@ -1,3 +1,4 @@
+use super::southbound::types::FailedInterfaces;
 use super::types::scheduling::Config;
 use super::types::uni_types::{self, compute_streams, Cuc, Stream, StreamStatus};
 use super::{Cnc, CNC_NOT_PRESENT};
@@ -37,7 +38,7 @@ pub trait StorageAdapterInterface {
     fn set_streams_configured(
         &self,
         domains: &Vec<uni_types::Domain>,
-        failed_streams: &HashSet<String>,
+        failed_interfaces: &FailedInterfaces,
     );
 
     /// Returns the domain of the requesting CUC
@@ -422,10 +423,11 @@ impl StorageAdapterInterface for FileStorage {
         &self,
         domains: Vec<compute_streams::Domain>,
     ) -> Vec<uni_types::Domain> {
+        let domain_lock = self.domains.read().unwrap();
         let mut result: Vec<uni_types::Domain> = Vec::new();
 
         for req_domain in domains.iter() {
-            for domain in self.domains.read().unwrap().iter() {
+            for domain in domain_lock.iter() {
                 if req_domain.domain_id == domain.domain_id {
                     let mut domain_copy = uni_types::Domain {
                         domain_id: domain.domain_id.clone(),
@@ -459,6 +461,8 @@ impl StorageAdapterInterface for FileStorage {
             }
         }
 
+        drop(domain_lock);
+
         result
     }
 
@@ -466,8 +470,21 @@ impl StorageAdapterInterface for FileStorage {
     fn set_streams_configured(
         &self,
         domains: &Vec<uni_types::Domain>,
-        failed_streams: &HashSet<String>,
+        failed_interfaces: &FailedInterfaces,
     ) {
+        // gets all streams that failed
+        let failed_stream_ids: HashSet<String> =
+            failed_interfaces
+                .interfaces
+                .iter()
+                .fold(HashSet::new(), |mut acc, fi| {
+                    fi.affected_streams.iter().for_each(|id| {
+                        acc.insert(id.clone());
+                    });
+                    acc
+                });
+
+        // apply changes
         let mut domain_lock = self.domains.write().unwrap();
         for change_domain in domains.iter() {
             for domain in domain_lock.iter_mut() {
@@ -478,10 +495,10 @@ impl StorageAdapterInterface for FileStorage {
                                 for change_stream in change_cuc.stream.iter() {
                                     for stream in cuc.stream.iter_mut() {
                                         if stream.stream_id == change_stream.stream_id {
-                                            if failed_streams.get(&stream.stream_id).is_none() {
+                                            if failed_stream_ids.get(&stream.stream_id).is_none() {
                                                 stream.stream_status = StreamStatus::Configured;
                                             } else {
-                                                stream.stream_status = StreamStatus::Planned;
+                                                stream.stream_status = StreamStatus::Modified;
                                             }
                                         }
                                     }
