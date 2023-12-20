@@ -282,7 +282,6 @@ impl NorthboundControllerInterface for Cnc {
         for stream_id in input.iter() {
             self.storage.remove_stream(cuc_id, stream_id.clone());
         }
-        // TODO what gets returned?? -> Success?
         String::from("Success")
     }
 
@@ -333,27 +332,6 @@ impl NorthboundControllerInterface for Cnc {
                         accumulated_latency: 0,
                         interface_configuration: types::tsn_types::GroupInterfaceConfiguration {
                             interface_list: Vec::new(),
-                            // TODO what to do with this group status talker listener? sending to cuc?
-                            // vec![types::tsn_types::InterfaceListElement {
-                            //     config_list: vec![types::tsn_types::ConfigListElement {
-                            //         index: 0,
-                            //         config_value:
-                            //             types::tsn_types::ConfigValue::Ieee802MacAddresses(
-                            //                 types::tsn_types::GroupIeee802MacAddress {
-                            //                     destination_mac_adress: String::from(
-                            //                         "00-00-00-0F-00-00",
-                            //                     ),
-                            //                     source_mac_adress: String::from(
-                            //                         "00-00-00-00-00-01",
-                            //                     ),
-                            //                 },
-                            //             ),
-                            //     }],
-                            //     group_interface_id: GroupInterfaceId {
-                            //         interface_name: String::new(),
-                            //         mac_address: String::new(),
-                            //     },
-                            // }],
                         },
                     },
                 },
