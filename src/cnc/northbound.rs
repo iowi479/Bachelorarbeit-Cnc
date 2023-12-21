@@ -81,8 +81,6 @@ pub trait NorthboundControllerInterface {
         input: remove_streams::Input,
     ) -> remove_streams::Output;
 
-    // TODO type touple... correct?
-    // fn stream_request(&self, request: Vec<(GroupTalker, Vec<GroupListener>)>);
     fn set_streams(&self, cuc_id: &String, request: Vec<StreamRequest>);
 }
 
@@ -156,7 +154,7 @@ impl MockUniAdapter {
         };
 
         let listeners: Vec<GroupListener> = vec![GroupListener {
-            index: 0, // TODO stream_id??? and index???
+            index: 0,
             end_station_interfaces: vec![GroupInterfaceId {
                 mac_address: "00-00-00-00-00-02".to_string(),
                 interface_name: "eth1".to_string(),
@@ -231,7 +229,7 @@ impl MockUniAdapter {
         };
 
         let listeners: Vec<GroupListener> = vec![GroupListener {
-            index: 0, // TODO stream_id??? and index???
+            index: 0,
             end_station_interfaces: vec![GroupInterfaceId {
                 mac_address: "00-00-00-00-00-03".to_string(),
                 interface_name: "eth0".to_string(),
@@ -307,7 +305,7 @@ impl MockUniAdapter {
         };
 
         let listeners: Vec<GroupListener> = vec![GroupListener {
-            index: 0, // TODO stream_id??? and index???
+            index: 0,
             end_station_interfaces: vec![GroupInterfaceId {
                 mac_address: "00-00-00-00-00-03".to_string(),
                 interface_name: "eth0".to_string(),
@@ -329,9 +327,6 @@ impl MockUniAdapter {
             talker,
             listeners,
         });
-
-        // TODO configure stream element... What gets send from cuc, what is default and what is configured by CNC/Algo...
-        // let stream: Stream = Stream { stream_id: "00-01".to_string(), stream_status: StreamStatus::Planned, talker: Talker{group_talker: talker,group_status_talker_listener: GroupStatusTalkerListener{}}, listener, group_status_stream: super::tsntypes::tsn_types::GroupStatusStream { status_info: super::tsntypes::tsn_types::StatusInfoContainer { talker_status: (), listener_status: (), failure_code: () }, failed_interfaces: () } }
 
         return result;
     }
