@@ -3,12 +3,12 @@ use super::types::notification_types::NotificationContent;
 use super::types::tsn_types::{
     DataFrameSpecificationElement, DataFrameSpecificationElementType, GroupIeee802VlanTag,
     GroupInterfaceCapabilities, GroupInterfaceId, GroupListener, GroupTalker,
-    GroupUserToNetworkRequirements, StreamIdTypeUpper, StreamRankContainer,
-    TrafficSpecificationContainer,
+    GroupUserToNetworkRequirements, StreamRankContainer, TrafficSpecificationContainer,
 };
 use super::types::uni_types::{
     compute_streams, remove_streams, request_domain_id, request_free_stream_id,
 };
+use super::types::StreamRequest;
 use super::{Cnc, CNC_NOT_PRESENT};
 use std::sync::Weak;
 use std::time::Duration;
@@ -83,11 +83,7 @@ pub trait NorthboundControllerInterface {
 
     // TODO type touple... correct?
     // fn stream_request(&self, request: Vec<(GroupTalker, Vec<GroupListener>)>);
-    fn set_streams(
-        &self,
-        cuc_id: &String,
-        request: Vec<(StreamIdTypeUpper, GroupTalker, Vec<GroupListener>)>,
-    );
+    fn set_streams(&self, cuc_id: &String, request: Vec<StreamRequest>);
 }
 
 pub struct MockUniAdapter {
@@ -104,11 +100,11 @@ impl MockUniAdapter {
         }
     }
 
-    pub fn get_example_add_stream() -> Vec<(StreamIdTypeUpper, GroupTalker, Vec<GroupListener>)> {
-        let mut result: Vec<(StreamIdTypeUpper, GroupTalker, Vec<GroupListener>)> = Vec::new();
+    pub fn get_example_add_stream() -> Vec<StreamRequest> {
+        let mut result: Vec<StreamRequest> = Vec::new();
 
         // 1
-        let streamid = String::from("00-00-00-00-00-01:00-01");
+        let stream_id = String::from("00-00-00-00-00-01:00-01");
         let talker: GroupTalker = GroupTalker {
             stream_rank: StreamRankContainer { rank: 1 },
             end_station_interfaces: vec![GroupInterfaceId {
@@ -159,7 +155,7 @@ impl MockUniAdapter {
             },
         };
 
-        let listener: Vec<GroupListener> = vec![GroupListener {
+        let listeners: Vec<GroupListener> = vec![GroupListener {
             index: 0, // TODO stream_id??? and index???
             end_station_interfaces: vec![GroupInterfaceId {
                 mac_address: "00-00-00-00-00-02".to_string(),
@@ -176,10 +172,14 @@ impl MockUniAdapter {
                 cb_stream_iden_type_list: Vec::new(),
             },
         }];
-        result.push((streamid, talker, listener));
+        result.push(StreamRequest {
+            stream_id,
+            talker,
+            listeners,
+        });
 
         // 2
-        let streamid = String::from("00-00-00-00-00-01:00-02");
+        let stream_id = String::from("00-00-00-00-00-01:00-02");
         let talker: GroupTalker = GroupTalker {
             stream_rank: StreamRankContainer { rank: 1 },
             end_station_interfaces: vec![GroupInterfaceId {
@@ -230,7 +230,7 @@ impl MockUniAdapter {
             },
         };
 
-        let listener: Vec<GroupListener> = vec![GroupListener {
+        let listeners: Vec<GroupListener> = vec![GroupListener {
             index: 0, // TODO stream_id??? and index???
             end_station_interfaces: vec![GroupInterfaceId {
                 mac_address: "00-00-00-00-00-03".to_string(),
@@ -248,10 +248,14 @@ impl MockUniAdapter {
             },
         }];
 
-        result.push((streamid, talker, listener));
+        result.push(StreamRequest {
+            stream_id,
+            talker,
+            listeners,
+        });
 
         // 3
-        let streamid = String::from("00-00-00-00-00-02:00-03");
+        let stream_id = String::from("00-00-00-00-00-02:00-03");
         let talker: GroupTalker = GroupTalker {
             stream_rank: StreamRankContainer { rank: 1 },
             end_station_interfaces: vec![GroupInterfaceId {
@@ -302,7 +306,7 @@ impl MockUniAdapter {
             },
         };
 
-        let listener: Vec<GroupListener> = vec![GroupListener {
+        let listeners: Vec<GroupListener> = vec![GroupListener {
             index: 0, // TODO stream_id??? and index???
             end_station_interfaces: vec![GroupInterfaceId {
                 mac_address: "00-00-00-00-00-03".to_string(),
@@ -320,7 +324,11 @@ impl MockUniAdapter {
             },
         }];
 
-        result.push((streamid, talker, listener));
+        result.push(StreamRequest {
+            stream_id,
+            talker,
+            listeners,
+        });
 
         // TODO configure stream element... What gets send from cuc, what is default and what is configured by CNC/Algo...
         // let stream: Stream = Stream { stream_id: "00-01".to_string(), stream_status: StreamStatus::Planned, talker: Talker{group_talker: talker,group_status_talker_listener: GroupStatusTalkerListener{}}, listener, group_status_stream: super::tsntypes::tsn_types::GroupStatusStream { status_info: super::tsntypes::tsn_types::StatusInfoContainer { talker_status: (), listener_status: (), failure_code: () }, failed_interfaces: () } }

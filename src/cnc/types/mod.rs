@@ -171,3 +171,9 @@ pub struct FailedStream {
     // TODO acutally here?
     pub failure_code: u32,
 }
+
+pub struct StreamRequest {
+    pub stream_id: StreamIdTypeUpper,
+    pub talker: tsn_types::GroupTalker,
+    pub listeners: Vec<tsn_types::GroupListener>,
+}

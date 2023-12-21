@@ -12,9 +12,8 @@ use self::storage::StorageAdapterInterface;
 use self::topology::{TopologyAdapterInterface, TopologyControllerInterface};
 use self::types::computation::ComputationType;
 use self::types::notification_types::{self, NotificationContent};
-use self::types::tsn_types::StreamIdTypeUpper;
 use self::types::uni_types::{self, Stream};
-use self::types::{FailedInterfaces, FailedStream};
+use self::types::{FailedInterfaces, FailedStream, StreamRequest};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Weak};
 
@@ -308,26 +307,17 @@ impl NorthboundControllerInterface for Cnc {
         }
     }
 
-    // TODO tuple als type definieren
-    fn set_streams(
-        &self,
-        cuc_id: &String,
-        request: Vec<(
-            StreamIdTypeUpper,
-            types::tsn_types::GroupTalker,
-            Vec<types::tsn_types::GroupListener>,
-        )>,
-    ) {
+    fn set_streams(&self, cuc_id: &String, request: Vec<StreamRequest>) {
         // TODO parse request and add to storage
         // TODO status groups and normal groups. When does everthig get created
         let mut streams: Vec<Stream> = Vec::new();
 
         for requested_stream in request {
             let s = Stream {
-                stream_id: requested_stream.0,
+                stream_id: requested_stream.stream_id,
                 stream_status: types::uni_types::StreamStatus::Planned,
                 talker: types::uni_types::Talker {
-                    group_talker: requested_stream.1.clone(),
+                    group_talker: requested_stream.talker.clone(),
                     group_status_talker_listener: types::tsn_types::GroupStatusTalkerListener {
                         accumulated_latency: 0,
                         interface_configuration: types::tsn_types::GroupInterfaceConfiguration {
@@ -335,9 +325,10 @@ impl NorthboundControllerInterface for Cnc {
                         },
                     },
                 },
+                // TODO this requires only one listener
                 listener: vec![types::uni_types::Listener {
                     index: 0,
-                    group_listener: requested_stream.2[0].clone(),
+                    group_listener: requested_stream.listeners[0].clone(),
                     group_status_talker_listener: types::tsn_types::GroupStatusTalkerListener {
                         accumulated_latency: 0,
                         interface_configuration: types::tsn_types::GroupInterfaceConfiguration {
