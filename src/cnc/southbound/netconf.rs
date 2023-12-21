@@ -140,7 +140,7 @@ pub fn put_config_in_dtree(dtree: &mut DataTree, port_configuration: &PortConfig
     if config.admin_control_list.len() == 0 {
         // this should empty the list but not sure... test
         // TODO does this work?
-        if let Err(e) = dtree.remove(&(port_xpath.clone() + "/admin-control-list")) {
+        if let Err(e) = dtree.remove((port_xpath.clone() + "/admin-control-list").as_str()) {
             eprintln!("[Southbound] couldnt remove admin-control-list: {:?}", e);
         }
     }
