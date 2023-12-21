@@ -121,8 +121,6 @@ impl SouthboundAdapterInterface for NetconfAdapter {
             });
         }
 
-        // TODO not here... maybe i cant remove admincontrollist entries. with my method yet. Test this...
-
         // TODO do still commit even if not all were successfull?
         if configured_nodes.len() == schedule.configs.len() {
             for (node_id, client) in configured_nodes.iter_mut() {
