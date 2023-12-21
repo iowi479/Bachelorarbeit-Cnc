@@ -8,8 +8,6 @@ use std::fs::File;
 use std::io::{Error, Read, Write};
 use std::sync::{RwLock, Weak};
 
-// TODO when modifying a stream it  needs to be set as modified!!! nowhere done yet
-
 /// Any StorageComponent that should be used with the CNC must implement this trait.
 pub trait StorageAdapterInterface {
     /// This gets called when the CNC is created and linked via this.set_cnc_ref(...);
@@ -288,6 +286,7 @@ impl StorageAdapterInterface for FileStorage {
 
                 if let Some(s) = found_stream {
                     *s = stream.clone();
+                    s.stream_status = StreamStatus::Modified;
                 } else {
                     cuc.stream.push(stream.clone());
                 }
