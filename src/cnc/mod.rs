@@ -118,12 +118,15 @@ impl Cnc {
         cnc.storage
             .set_configs(&computation_result.schedule.configs);
 
-        println!(
-            "[Scheduler] computation finished - with {} streams failed",
-            computation_result.failed_streams.len()
-        );
+        if computation_result.failed_streams.len() > 0 {
+            println!(
+                "[Scheduler] computation finished - with {} streams failed",
+                computation_result.failed_streams.len()
+            );
+        } else {
+            println!("[Scheduler] computation finished ");
+        }
 
-        // TODO handle failed interfaces...
         // sets interface configurations of talker/listeners to storage
         cnc.storage.modify_streams(&computation_result.domains);
         let computed_notification: NotificationContent =
@@ -137,10 +140,14 @@ impl Cnc {
             .southbound
             .configure_network(&topology, &computation_result.schedule);
 
-        println!(
-            "[Scheduler] configuring finished - with {} failed interfaces",
-            failed_interfaces.interfaces.len()
-        );
+        if failed_interfaces.interfaces.len() > 0 {
+            println!(
+                "[Scheduler] configuration finished - with {} failed interfaces",
+                failed_interfaces.interfaces.len()
+            );
+        } else {
+            println!("[Scheduler] configuration finished ");
+        }
 
         cnc.storage
             .set_streams_configured(&domains, &failed_interfaces);

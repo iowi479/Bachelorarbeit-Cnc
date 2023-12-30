@@ -127,9 +127,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                 let commit_result = client.commit();
 
                 match commit_result {
-                    Ok(_) => {
-                        println!("[Southbound] commit successful")
-                    }
+                    Ok(_) => {}
                     Err(e) => {
                         eprintln!("[Southbound] error while committing: {e:?}");
 
