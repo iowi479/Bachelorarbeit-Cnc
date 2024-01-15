@@ -93,9 +93,9 @@ impl Cnc {
         );
 
         // configuration of all Components
-        cnc.northbound.run();
-        cnc.topology.run();
         cnc.storage.configure_storage();
+        cnc.topology.run();
+        cnc.northbound.run();
 
         // wait for computation-requests
         for computation_type in schedule_computation_receiver {

@@ -71,9 +71,7 @@ pub trait StorageAdapterInterface {
 pub struct FileStorage {
     domains_path: &'static str,
     configs_path: &'static str,
-
     domains: RwLock<Vec<uni_types::Domain>>,
-
     configs: RwLock<HashMap<u32, Config>>,
     cnc: Weak<Cnc>,
 }

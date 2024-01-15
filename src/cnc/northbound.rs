@@ -82,15 +82,35 @@ pub trait NorthboundControllerInterface {
     ) -> remove_streams::Output;
 
     fn set_streams(&self, cuc_id: &String, request: Vec<StreamRequest>);
+
+    // TODO get_streams ??
 }
 
+/// This Mock-Implementation is used for testing the CNC
+pub struct MockInsertStreamAdapter {
+    cnc: Weak<Cnc>,
+    cuc_id: String,
+}
+
+// This Mock-Implementation is used for testing the CNC
+pub struct MockRemoveStreamAdapter {
+    cnc: Weak<Cnc>,
+    cuc_id: String,
+}
+
+/// This Mock-Implementation is used for testing the CNC
+pub struct MockComputeStreamAdapter {
+    cnc: Weak<Cnc>,
+    cuc_id: String,
+}
+
+/// This Mock-Implementation is used for testing the CNC
 pub struct MockUniAdapter {
     cnc: Weak<Cnc>,
     cuc_id: String,
 }
 
-// Implementation specific stuff
-impl MockUniAdapter {
+impl MockInsertStreamAdapter {
     pub fn new(cuc_id: String) -> Self {
         Self {
             cnc: Weak::default(),
@@ -98,6 +118,7 @@ impl MockUniAdapter {
         }
     }
 
+    /// generates mock data for testing
     pub fn get_example_add_stream() -> Vec<StreamRequest> {
         let mut result: Vec<StreamRequest> = Vec::new();
 
@@ -332,6 +353,367 @@ impl MockUniAdapter {
     }
 }
 
+impl MockRemoveStreamAdapter {
+    pub fn new(cuc_id: String) -> Self {
+        Self {
+            cnc: Weak::default(),
+            cuc_id,
+        }
+    }
+}
+
+impl MockComputeStreamAdapter {
+    pub fn new(cuc_id: String) -> Self {
+        Self {
+            cnc: Weak::default(),
+            cuc_id,
+        }
+    }
+}
+
+impl MockUniAdapter {
+    pub fn new(cuc_id: String) -> Self {
+        Self {
+            cnc: Weak::default(),
+            cuc_id,
+        }
+    }
+
+    /// generates mock data for testing
+    pub fn get_example_add_stream() -> Vec<StreamRequest> {
+        let mut result: Vec<StreamRequest> = Vec::new();
+
+        // 1
+        let stream_id = String::from("00-00-00-00-00-01:00-01");
+        let talker: GroupTalker = GroupTalker {
+            stream_rank: StreamRankContainer { rank: 1 },
+            end_station_interfaces: vec![GroupInterfaceId {
+                interface_name: "eth0".to_string(),
+                mac_address: "00-00-00-00-00-01".to_string(),
+            }],
+            data_frame_specification: vec![
+                DataFrameSpecificationElement {
+                    index: 0,
+                    field: DataFrameSpecificationElementType::Ieee802MacAddresses(
+                        super::types::tsn_types::GroupIeee802MacAddress {
+                            destination_mac_adress: "00-00-00-00-00-02".to_string(),
+                            source_mac_adress: "00-00-00-00-00-01".to_string(),
+                        },
+                    ),
+                },
+                DataFrameSpecificationElement {
+                    index: 1,
+                    field: DataFrameSpecificationElementType::Ieee802VlanTag(GroupIeee802VlanTag {
+                        priority_code_point: 6,
+                        vlan_id: 0,
+                    }),
+                },
+            ],
+            traffic_specification: TrafficSpecificationContainer {
+                interval: super::types::tsn_types::TrafficSpecificationInterval {
+                    numerator: 1000000,
+                    denominator: 1000000000,
+                },
+                max_frames_per_interval: 1,
+                max_frame_size: 1,
+                transmission_selection: 0,
+                time_aware: super::types::tsn_types::TimeAwareContainer {
+                    earliest_transmit_offset: 100,
+                    latest_transmit_offset: 500000,
+                    jitter: 0,
+                },
+            },
+            user_to_network_requirements: super::types::tsn_types::GroupUserToNetworkRequirements {
+                num_seemless_trees: 1,
+                max_latency: 100000,
+            },
+            interface_capabilities: super::types::tsn_types::GroupInterfaceCapabilities {
+                vlan_tag_capable: true,
+                // default to empty list - IEEE 8021Q 46.2.3.7.2
+                cb_stream_iden_type_list: Vec::new(),
+                cb_sequence_type_list: Vec::new(),
+            },
+        };
+
+        let listeners: Vec<GroupListener> = vec![GroupListener {
+            index: 0,
+            end_station_interfaces: vec![GroupInterfaceId {
+                mac_address: "00-00-00-00-00-02".to_string(),
+                interface_name: "eth1".to_string(),
+            }],
+            user_to_network_requirements: GroupUserToNetworkRequirements {
+                num_seemless_trees: 1,
+                max_latency: 100000,
+            },
+            interface_capabilities: GroupInterfaceCapabilities {
+                vlan_tag_capable: true,
+                // default to empty list - IEEE 8021Q 46.2.3.7.2
+                cb_sequence_type_list: Vec::new(),
+                cb_stream_iden_type_list: Vec::new(),
+            },
+        }];
+        result.push(StreamRequest {
+            stream_id,
+            talker,
+            listeners,
+        });
+
+        // 2
+        let stream_id = String::from("00-00-00-00-00-01:00-02");
+        let talker: GroupTalker = GroupTalker {
+            stream_rank: StreamRankContainer { rank: 1 },
+            end_station_interfaces: vec![GroupInterfaceId {
+                interface_name: "eth0".to_string(),
+                mac_address: "00-00-00-00-00-01".to_string(),
+            }],
+            data_frame_specification: vec![
+                DataFrameSpecificationElement {
+                    index: 0,
+                    field: DataFrameSpecificationElementType::Ieee802MacAddresses(
+                        super::types::tsn_types::GroupIeee802MacAddress {
+                            destination_mac_adress: "00-00-00-00-00-03".to_string(),
+                            source_mac_adress: "00-00-00-00-00-01".to_string(),
+                        },
+                    ),
+                },
+                DataFrameSpecificationElement {
+                    index: 1,
+                    field: DataFrameSpecificationElementType::Ieee802VlanTag(GroupIeee802VlanTag {
+                        priority_code_point: 6,
+                        vlan_id: 0,
+                    }),
+                },
+            ],
+            traffic_specification: TrafficSpecificationContainer {
+                interval: super::types::tsn_types::TrafficSpecificationInterval {
+                    numerator: 1000000,
+                    denominator: 1000000000,
+                },
+                max_frames_per_interval: 1,
+                max_frame_size: 1,
+                transmission_selection: 0,
+                time_aware: super::types::tsn_types::TimeAwareContainer {
+                    earliest_transmit_offset: 100,
+                    latest_transmit_offset: 500000,
+                    jitter: 0,
+                },
+            },
+            user_to_network_requirements: super::types::tsn_types::GroupUserToNetworkRequirements {
+                num_seemless_trees: 1,
+                max_latency: 100000,
+            },
+            interface_capabilities: super::types::tsn_types::GroupInterfaceCapabilities {
+                vlan_tag_capable: true,
+                // default to empty list - IEEE 8021Q 46.2.3.7.2
+                cb_stream_iden_type_list: Vec::new(),
+                cb_sequence_type_list: Vec::new(),
+            },
+        };
+
+        let listeners: Vec<GroupListener> = vec![GroupListener {
+            index: 0,
+            end_station_interfaces: vec![GroupInterfaceId {
+                mac_address: "00-00-00-00-00-03".to_string(),
+                interface_name: "eth0".to_string(),
+            }],
+            user_to_network_requirements: GroupUserToNetworkRequirements {
+                num_seemless_trees: 1,
+                max_latency: 100000,
+            },
+            interface_capabilities: GroupInterfaceCapabilities {
+                vlan_tag_capable: true,
+                // default to empty list - IEEE 8021Q 46.2.3.7.2
+                cb_sequence_type_list: Vec::new(),
+                cb_stream_iden_type_list: Vec::new(),
+            },
+        }];
+
+        result.push(StreamRequest {
+            stream_id,
+            talker,
+            listeners,
+        });
+
+        // 3
+        let stream_id = String::from("00-00-00-00-00-02:00-03");
+        let talker: GroupTalker = GroupTalker {
+            stream_rank: StreamRankContainer { rank: 1 },
+            end_station_interfaces: vec![GroupInterfaceId {
+                interface_name: "eth1".to_string(),
+                mac_address: "00-00-00-00-00-02".to_string(),
+            }],
+            data_frame_specification: vec![
+                DataFrameSpecificationElement {
+                    index: 0,
+                    field: DataFrameSpecificationElementType::Ieee802MacAddresses(
+                        super::types::tsn_types::GroupIeee802MacAddress {
+                            destination_mac_adress: "00-00-00-00-00-03".to_string(),
+                            source_mac_adress: "00-00-00-00-00-02".to_string(),
+                        },
+                    ),
+                },
+                DataFrameSpecificationElement {
+                    index: 1,
+                    field: DataFrameSpecificationElementType::Ieee802VlanTag(GroupIeee802VlanTag {
+                        priority_code_point: 6,
+                        vlan_id: 0,
+                    }),
+                },
+            ],
+            traffic_specification: TrafficSpecificationContainer {
+                interval: super::types::tsn_types::TrafficSpecificationInterval {
+                    numerator: 1000000,
+                    denominator: 1000000000,
+                },
+                max_frames_per_interval: 1,
+                max_frame_size: 1,
+                transmission_selection: 0,
+                time_aware: super::types::tsn_types::TimeAwareContainer {
+                    earliest_transmit_offset: 100,
+                    latest_transmit_offset: 500000,
+                    jitter: 0,
+                },
+            },
+            user_to_network_requirements: super::types::tsn_types::GroupUserToNetworkRequirements {
+                num_seemless_trees: 1,
+                max_latency: 100000,
+            },
+            interface_capabilities: super::types::tsn_types::GroupInterfaceCapabilities {
+                vlan_tag_capable: true,
+                // default to empty list - IEEE 8021Q 46.2.3.7.2
+                cb_stream_iden_type_list: Vec::new(),
+                cb_sequence_type_list: Vec::new(),
+            },
+        };
+
+        let listeners: Vec<GroupListener> = vec![GroupListener {
+            index: 0,
+            end_station_interfaces: vec![GroupInterfaceId {
+                mac_address: "00-00-00-00-00-03".to_string(),
+                interface_name: "eth0".to_string(),
+            }],
+            user_to_network_requirements: GroupUserToNetworkRequirements {
+                num_seemless_trees: 1,
+                max_latency: 100000,
+            },
+            interface_capabilities: GroupInterfaceCapabilities {
+                vlan_tag_capable: true,
+                // default to empty list - IEEE 8021Q 46.2.3.7.2
+                cb_sequence_type_list: Vec::new(),
+                cb_stream_iden_type_list: Vec::new(),
+            },
+        }];
+
+        result.push(StreamRequest {
+            stream_id,
+            talker,
+            listeners,
+        });
+
+        return result;
+    }
+}
+
+impl NorthboundAdapterInterface for MockInsertStreamAdapter {
+    fn compute_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound] Notification: <compute_stream_completed> \n\t{notification:?}");
+    }
+    fn configure_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound] Notification: <configure_stream_completed> \n\t{notification:?}");
+    }
+    fn remove_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound] Notification: <remove_stream_completed> \n\t{notification:?}");
+    }
+    fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
+        self.cnc = cnc;
+    }
+
+    fn run(&self) {
+        // these get moved to the new thread
+        let cnc = self.cnc.upgrade().expect(CNC_NOT_PRESENT).clone();
+        let cuc_id = self.cuc_id.clone();
+
+        println!("[Northbound] running now...");
+        thread::spawn(move || {
+            thread::sleep(Duration::from_secs(2));
+
+            // set stream-data
+            cnc.set_streams(&cuc_id, MockInsertStreamAdapter::get_example_add_stream());
+
+            thread::sleep(Duration::from_secs(10));
+        });
+    }
+}
+
+impl NorthboundAdapterInterface for MockRemoveStreamAdapter {
+    fn compute_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound] Notification: <compute_stream_completed> \n\t{notification:?}");
+    }
+    fn configure_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound] Notification: <configure_stream_completed> \n\t{notification:?}");
+    }
+    fn remove_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound] Notification: <remove_stream_completed> \n\t{notification:?}");
+    }
+    fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
+        self.cnc = cnc;
+    }
+
+    fn run(&self) {
+        // these get moved to the new thread
+        let cnc = self.cnc.upgrade().expect(CNC_NOT_PRESENT).clone();
+        let cuc_id = self.cuc_id.clone();
+
+        println!("[Northbound] running now...");
+        thread::spawn(move || {
+            thread::sleep(Duration::from_secs(2));
+
+            // remove stream
+            cnc.remove_streams(&cuc_id, vec![String::from("00-00-00-00-00-00:00-01")]);
+
+            thread::sleep(Duration::from_secs(10));
+        });
+    }
+}
+
+impl NorthboundAdapterInterface for MockComputeStreamAdapter {
+    fn compute_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound] Notification: <compute_stream_completed> \n\t{notification:?}");
+    }
+    fn configure_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound] Notification: <configure_stream_completed> \n\t{notification:?}");
+    }
+    fn remove_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound] Notification: <remove_stream_completed> \n\t{notification:?}");
+    }
+    fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
+        self.cnc = cnc;
+    }
+
+    fn run(&self) {
+        // these get moved to the new thread
+        let cnc = self.cnc.upgrade().expect(CNC_NOT_PRESENT).clone();
+        let cuc_id = self.cuc_id.clone();
+
+        println!("[Northbound] running now...");
+        thread::spawn(move || {
+            thread::sleep(Duration::from_secs(2));
+
+            // start a scheduling run
+            let domain: Vec<compute_streams::Domain> = vec![compute_streams::Domain {
+                domain_id: cnc.domain.clone(),
+                cuc: vec![compute_streams::CucElement {
+                    cuc_id: cuc_id.clone(),
+                    stream_list: None,
+                }],
+            }];
+            cnc.compute_streams(ComputationType::All(domain));
+
+            thread::sleep(Duration::from_secs(10));
+        });
+    }
+}
+
 impl NorthboundAdapterInterface for MockUniAdapter {
     fn compute_streams_completed(&self, notification: NotificationContent) {
         println!("[Northbound] Notification: <compute_stream_completed> \n\t{notification:?}");
@@ -342,7 +724,6 @@ impl NorthboundAdapterInterface for MockUniAdapter {
     fn remove_streams_completed(&self, notification: NotificationContent) {
         println!("[Northbound] Notification: <remove_streams_completed> \n\t{notification:?}");
     }
-
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
         self.cnc = cnc;
     }

@@ -19,6 +19,7 @@ mod netconf;
 pub mod types;
 
 pub trait SouthboundControllerInterface {}
+
 pub trait SouthboundAdapterInterface {
     /// configures the network.
     ///
