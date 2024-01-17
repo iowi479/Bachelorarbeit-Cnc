@@ -1,6 +1,10 @@
+# rust
 /target
 /Cargo.lock
+
+# ide
 /.vscode
 
+# filestorage-component
 /domain_storage.json
 /config_storage.json
