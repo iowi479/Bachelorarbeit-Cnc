@@ -3,11 +3,9 @@ use super::types::topology::{
     Topology,
 };
 use super::{Cnc, CNC_NOT_PRESENT};
-use std::{
-    sync::{RwLock, Weak},
-    thread,
-    time::Duration,
-};
+use std::sync::{RwLock, Weak};
+use std::thread;
+use std::time::Duration;
 
 pub trait TopologyControllerInterface {
     /// on a detected topology change, this gets called.

@@ -1,7 +1,9 @@
-use ba::cnc::{
-    middleware::IPVSDsyncTSNScheduling, northbound::MockUniAdapter, southbound::NetconfAdapter,
-    storage::FileStorage, topology::MockTopology, Cnc,
-};
+use ba::cnc::northbound::MockUniAdapter;
+use ba::cnc::scheduling::MockTSNScheduler;
+use ba::cnc::southbound::NetconfAdapter;
+use ba::cnc::storage::FileStorage;
+use ba::cnc::topology::MockTopology;
+use ba::cnc::Cnc;
 use std::sync::Arc;
 
 fn main() {
@@ -10,7 +12,7 @@ fn main() {
     let southbound = NetconfAdapter::new();
     let storage = FileStorage::new();
     let topology = MockTopology::new_failing();
-    let scheduler = IPVSDsyncTSNScheduling::new();
+    let scheduler = MockTSNScheduler::new();
 
     // Configuration for CNC
     let id: u32 = 0;

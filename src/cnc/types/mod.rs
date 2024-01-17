@@ -1,10 +1,7 @@
+use self::scheduling::Schedule;
+use self::tsn_types::{GroupInterfaceId, StreamIdTypeUpper};
+use self::uni_types::Domain;
 use std::collections::HashSet;
-
-use self::{
-    scheduling::Schedule,
-    tsn_types::{GroupInterfaceId, StreamIdTypeUpper},
-    uni_types::Domain,
-};
 
 /// Rust-Types for YANG-Models
 ///

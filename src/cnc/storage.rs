@@ -9,6 +9,7 @@ use std::io::{Error, Read, Write};
 use std::sync::{RwLock, Weak};
 
 /// Any StorageComponent that should be used with the CNC must implement this trait.
+/// TODO remove unused functions
 pub trait StorageAdapterInterface {
     /// This gets called when the CNC is created and linked via this.set_cnc_ref(...);
     /// This should fully setup everything the Storage-Component needs. After this is called, it has to be ready to operate.

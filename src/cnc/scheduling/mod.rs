@@ -22,12 +22,11 @@ pub trait SchedulerAdapterInterface {
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>);
 }
 
-pub struct IPVSDsyncTSNScheduling {
+pub struct MockTSNScheduler {
     cnc: Weak<Cnc>,
 }
 
-// TODO calling actual algorithm
-impl IPVSDsyncTSNScheduling {
+impl MockTSNScheduler {
     pub fn new() -> Self {
         Self {
             cnc: Weak::default(),
@@ -287,7 +286,7 @@ impl IPVSDsyncTSNScheduling {
     }
 }
 
-impl SchedulerAdapterInterface for IPVSDsyncTSNScheduling {
+impl SchedulerAdapterInterface for MockTSNScheduler {
     fn compute_schedule(&self, topology: &Topology, domains: &Vec<Domain>) -> ComputationResult {
         let result = self.compute_fake(topology, domains);
         return result;

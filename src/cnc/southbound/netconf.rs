@@ -1,20 +1,16 @@
 use super::types::YangModule;
-use crate::cnc::types::{
-    scheduling::PortConfiguration,
-    topology::{Port, SSHConfigurationParams},
-    tsn_types::BridgePortDelays,
-};
-use netconf_client::{
-    errors::NetconfClientError,
-    models::requests::{Filter, FilterType},
-    netconf_client::NetconfClient,
-};
+use crate::cnc::types::scheduling::PortConfiguration;
+use crate::cnc::types::topology::{Port, SSHConfigurationParams};
+use crate::cnc::types::tsn_types::BridgePortDelays;
+use netconf_client::errors::NetconfClientError;
+use netconf_client::models::requests::{Filter, FilterType};
+use netconf_client::netconf_client::NetconfClient;
 use std::sync::Arc;
-use yang2::{
-    context::{Context, ContextFlags},
-    data::{Data, DataFormat, DataParserFlags, DataPrinterFlags, DataTree, DataValidationFlags},
-    schema::DataValue,
+use yang2::context::{Context, ContextFlags};
+use yang2::data::{
+    Data, DataFormat, DataParserFlags, DataPrinterFlags, DataTree, DataValidationFlags,
 };
+use yang2::schema::DataValue;
 
 /// folder for all needed yang-models
 const SEARCH_DIR: &str = "./assets/yang/";

@@ -641,6 +641,7 @@ impl NorthboundAdapterInterface for MockInsertStreamAdapter {
             cnc.set_streams(&cuc_id, MockInsertStreamAdapter::get_example_add_stream());
 
             thread::sleep(Duration::from_secs(10));
+            cnc.set_operating(false);
         });
     }
 }
@@ -669,9 +670,12 @@ impl NorthboundAdapterInterface for MockRemoveStreamAdapter {
             thread::sleep(Duration::from_secs(2));
 
             // remove stream
-            cnc.remove_streams(&cuc_id, vec![String::from("00-00-00-00-00-00:00-01")]);
+            let res = cnc.remove_streams(&cuc_id, vec![String::from("00-00-00-00-00-01:00-01")]);
 
-            thread::sleep(Duration::from_secs(10));
+            println!("[Northbound] response to remove_streams {res:?}", res = res);
+
+            thread::sleep(Duration::from_secs(2));
+            cnc.set_operating(false);
         });
     }
 }
