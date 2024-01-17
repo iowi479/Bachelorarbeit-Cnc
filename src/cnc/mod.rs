@@ -1,12 +1,12 @@
-pub mod middleware;
 pub mod northbound;
+pub mod scheduling;
 pub mod southbound;
 pub mod storage;
 pub mod topology;
 pub mod types;
 
-use self::middleware::SchedulerAdapterInterface;
 use self::northbound::{NorthboundAdapterInterface, NorthboundControllerInterface};
+use self::scheduling::SchedulerAdapterInterface;
 use self::southbound::SouthboundAdapterInterface;
 use self::storage::StorageAdapterInterface;
 use self::topology::{TopologyAdapterInterface, TopologyControllerInterface};
@@ -14,8 +14,9 @@ use self::types::computation::ComputationType;
 use self::types::notification_types::{self, NotificationContent};
 use self::types::uni_types::{self, Stream};
 use self::types::{FailedInterfaces, FailedStream, StreamRequest};
-use std::sync::mpsc::{self, Receiver, Sender};
-use std::sync::{Arc, Weak};
+use std::borrow::BorrowMut;
+use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
+use std::sync::{Arc, RwLock, Weak};
 
 pub type NorthboundRef = Arc<dyn NorthboundAdapterInterface + Send + Sync>;
 pub type SouthboundRef = Arc<dyn SouthboundAdapterInterface + Send + Sync>;
@@ -34,6 +35,7 @@ pub struct Cnc {
     storage: StorageRef,
     topology: TopologyRef,
     scheduler: SchedulerRef,
+    operating: Arc<RwLock<bool>>,
 }
 
 impl Cnc {
@@ -85,6 +87,7 @@ impl Cnc {
                 storage,
                 topology,
                 scheduler,
+                operating: Arc::new(RwLock::new(true)),
             }
         });
         println!(
@@ -98,12 +101,33 @@ impl Cnc {
         cnc.northbound.run();
 
         // wait for computation-requests
-        for computation_type in schedule_computation_receiver {
-            Cnc::execute_computation(cnc.clone(), computation_type);
+        loop {
+            match schedule_computation_receiver.try_recv() {
+                Ok(computation_type) => {
+                    Cnc::execute_computation(cnc.clone(), computation_type);
+                }
+                Err(TryRecvError::Empty) => {}
+                Err(TryRecvError::Disconnected) => {
+                    println!("[CNC] got disconnected from scheduler");
+                    cnc.set_operating(false);
+                }
+            }
+
+            // check id cnc should stop operating
+            if !(*cnc.operating.read().unwrap()) {
+                break;
+            }
         }
 
         println!("[CNC] stopped...");
         drop(cnc);
+    }
+
+    fn set_operating(&self, value: bool) {
+        let o = self.operating.clone();
+        let mut o_lock = o.write().unwrap();
+        **(o_lock.borrow_mut()) = value;
+        drop(o_lock);
     }
 
     fn execute_computation(cnc: Arc<Cnc>, computation_type: ComputationType) {
