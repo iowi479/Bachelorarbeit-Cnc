@@ -12,7 +12,7 @@ use self::storage::StorageAdapterInterface;
 use self::topology::{TopologyAdapterInterface, TopologyControllerInterface};
 use self::types::computation::ComputationType;
 use self::types::notification_types::{self, NotificationContent};
-use self::types::uni_types::{self, Stream};
+use self::types::uni_types::{self, compute_streams, Stream};
 use self::types::{FailedInterfaces, FailedStream, StreamRequest};
 use std::borrow::BorrowMut;
 use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
@@ -24,7 +24,7 @@ pub type StorageRef = Arc<dyn StorageAdapterInterface + Send + Sync>;
 pub type TopologyRef = Arc<dyn TopologyAdapterInterface + Send + Sync>;
 pub type SchedulerRef = Arc<dyn SchedulerAdapterInterface + Send + Sync>;
 
-pub static CNC_NOT_PRESENT: &str = "CNC is not present exiting...";
+pub const CNC_NOT_PRESENT: &'static str = "CNC is not present exiting...";
 
 pub struct Cnc {
     pub id: u32,
@@ -379,6 +379,19 @@ impl NorthboundControllerInterface for Cnc {
             streams.push(s);
         }
         self.storage.set_streams(cuc_id, &streams);
+    }
+
+    fn get_streams(&self, cuc_id: &String) -> uni_types::Domain {
+        self.storage.get_streams_in_domain(compute_streams::Domain {
+            domain_id: self.domain.clone(),
+            cuc: vec![compute_streams::CucElement {
+                cuc_id: cuc_id.clone(),
+                stream_list: None,
+            }],
+        })[0]
+            .clone()
+
+        // TODO check if this actually works
     }
 }
 

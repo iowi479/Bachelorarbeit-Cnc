@@ -6,7 +6,7 @@ use super::types::tsn_types::{
     GroupUserToNetworkRequirements, StreamRankContainer, TrafficSpecificationContainer,
 };
 use super::types::uni_types::{
-    compute_streams, remove_streams, request_domain_id, request_free_stream_id,
+    compute_streams, remove_streams, request_domain_id, request_free_stream_id, Domain,
 };
 use super::types::StreamRequest;
 use super::{Cnc, CNC_NOT_PRESENT};
@@ -83,7 +83,12 @@ pub trait NorthboundControllerInterface {
 
     fn set_streams(&self, cuc_id: &String, request: Vec<StreamRequest>);
 
-    // TODO get_streams ??
+    /// this is additional functionality
+    ///
+    /// returnes all information about the streams for this cuc
+    ///
+    /// can be used for providing a rmp interface
+    fn get_streams(&self, cuc_id: &String) -> Domain;
 }
 
 /// This Mock-Implementation is used for testing the CNC
@@ -100,6 +105,12 @@ pub struct MockRemoveStreamAdapter {
 
 /// This Mock-Implementation is used for testing the CNC
 pub struct MockComputeStreamAdapter {
+    cnc: Weak<Cnc>,
+    cuc_id: String,
+}
+
+/// This Mock-Implementation is used for testing the CNC
+pub struct MockGetStreamAdapter {
     cnc: Weak<Cnc>,
     cuc_id: String,
 }
@@ -363,6 +374,15 @@ impl MockRemoveStreamAdapter {
 }
 
 impl MockComputeStreamAdapter {
+    pub fn new(cuc_id: String) -> Self {
+        Self {
+            cnc: Weak::default(),
+            cuc_id,
+        }
+    }
+}
+
+impl MockGetStreamAdapter {
     pub fn new(cuc_id: String) -> Self {
         Self {
             cnc: Weak::default(),
@@ -714,6 +734,43 @@ impl NorthboundAdapterInterface for MockComputeStreamAdapter {
             cnc.compute_streams(ComputationType::All(domain));
 
             thread::sleep(Duration::from_secs(10));
+        });
+    }
+}
+
+impl NorthboundAdapterInterface for MockGetStreamAdapter {
+    fn compute_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound] Notification: <compute_stream_completed> \n\t{notification:?}");
+    }
+    fn configure_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound] Notification: <configure_stream_completed> \n\t{notification:?}");
+    }
+    fn remove_streams_completed(&self, notification: NotificationContent) {
+        println!("[Northbound] Notification: <remove_stream_completed> \n\t{notification:?}");
+    }
+    fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
+        self.cnc = cnc;
+    }
+
+    fn run(&self) {
+        // these get moved to the new thread
+        let cnc = self.cnc.upgrade().expect(CNC_NOT_PRESENT).clone();
+        let cuc_id = self.cuc_id.clone();
+
+        println!("[Northbound] running now...");
+        thread::spawn(move || {
+            thread::sleep(Duration::from_secs(2));
+
+            // get streams
+            let res = cnc.get_streams(&cuc_id);
+
+            // this tests for the correct streams for the executed test
+            // TODO do more tests here
+            assert_eq!(res.cuc[0].stream.len(), 3);
+            println!("[Northbound] response to get_streams {res:?}", res = res);
+
+            thread::sleep(Duration::from_secs(2));
+            cnc.set_operating(false);
         });
     }
 }

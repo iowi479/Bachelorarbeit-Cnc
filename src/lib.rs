@@ -141,4 +141,13 @@ mod tests {
         // TODO add test
         assert_eq!(true, true)
     }
+
+    #[test]
+    fn test_get_all() {
+        // TODO add test
+        test_insert_stream();
+        // now the storage is filled with streams
+
+        assert_eq!(true, true)
+    }
 }

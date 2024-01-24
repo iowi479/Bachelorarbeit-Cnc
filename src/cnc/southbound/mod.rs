@@ -122,7 +122,6 @@ impl SouthboundAdapterInterface for NetconfAdapter {
             });
         }
 
-        // TODO do still commit even if not all were successfull?
         if configured_nodes.len() == schedule.configs.len() {
             for (node_id, client) in configured_nodes.iter_mut() {
                 let commit_result = client.commit();
