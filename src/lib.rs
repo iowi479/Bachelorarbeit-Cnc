@@ -98,7 +98,7 @@ mod tests {
                 stream_contained = true;
             }
         }
-        assert!(stream_contained);
+        assert!(stream_contained, "stream to remove is not present");
         drop(storage);
 
         // Create needed Components
