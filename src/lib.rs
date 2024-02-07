@@ -144,10 +144,27 @@ mod tests {
 
     #[test]
     fn test_get_all() {
-        // TODO add test
+        // TODO does this work?
         test_insert_stream();
         // now the storage is filled with streams
 
-        assert_eq!(true, true)
+        let domain: String = String::from("test-domain-id");
+        let storage = FileStorage::new();
+        storage.configure_storage();
+        let storage_domain = storage.get_streams_in_domain(Domain {
+            domain_id: domain.clone(),
+            cuc: vec![CucElement {
+                cuc_id: String::from("test-cuc-id"),
+                stream_list: None,
+            }],
+        });
+
+        assert!(storage_domain.len() > 0);
+        assert!(storage_domain[0].cuc.len() > 0);
+
+        let streams = &storage_domain[0].cuc[0].stream;
+
+        assert_eq!(streams.len(), 3);
+        drop(storage);
     }
 }

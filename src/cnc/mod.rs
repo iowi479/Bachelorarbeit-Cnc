@@ -18,6 +18,7 @@ use std::borrow::BorrowMut;
 use std::sync::mpsc::{self, Receiver, Sender, TryRecvError};
 use std::sync::{Arc, RwLock, Weak};
 
+// these are helper types to make the code more readable
 pub type NorthboundRef = Arc<dyn NorthboundAdapterInterface + Send + Sync>;
 pub type SouthboundRef = Arc<dyn SouthboundAdapterInterface + Send + Sync>;
 pub type StorageRef = Arc<dyn StorageAdapterInterface + Send + Sync>;
@@ -298,10 +299,10 @@ impl NorthboundControllerInterface for Cnc {
         &self,
         computation: ComputationType,
     ) -> types::uni_types::compute_streams::Output {
-        match self.schedule_computation_sender.send(computation) {
+        return match self.schedule_computation_sender.send(computation) {
             Ok(_) => String::from("Success"),
             Err(e) => e.to_string(),
-        }
+        };
     }
 
     fn remove_streams(
@@ -312,7 +313,7 @@ impl NorthboundControllerInterface for Cnc {
         for stream_id in input.iter() {
             self.storage.remove_stream(cuc_id, stream_id.clone());
         }
-        String::from("Success")
+        return String::from("Success");
     }
 
     fn request_domain_id(
@@ -320,8 +321,8 @@ impl NorthboundControllerInterface for Cnc {
         input: types::uni_types::request_domain_id::Input,
     ) -> types::uni_types::request_domain_id::Output {
         return match self.storage.get_domain_id_of_cuc(input) {
-            None => String::from("Failure"),
             Some(domain_id) => domain_id,
+            None => String::from("Failure"),
         };
     }
 
@@ -329,15 +330,16 @@ impl NorthboundControllerInterface for Cnc {
         &self,
         input: types::uni_types::request_free_stream_id::Input,
     ) -> types::uni_types::request_free_stream_id::Output {
-        match self
+        return match self
             .storage
             .get_free_stream_id(input.domain_id, input.cuc_id)
         {
             Some(id) => id,
             None => String::from("no id"),
-        }
+        };
     }
 
+    // TODO cleanup
     fn set_streams(&self, cuc_id: &String, request: Vec<StreamRequest>) {
         // TODO parse request and add to storage
         // TODO status groups and normal groups. When does everthig get created
@@ -382,21 +384,23 @@ impl NorthboundControllerInterface for Cnc {
     }
 
     fn get_streams(&self, cuc_id: &String) -> uni_types::Domain {
-        self.storage.get_streams_in_domain(compute_streams::Domain {
+        let search_domain: compute_streams::Domain = compute_streams::Domain {
             domain_id: self.domain.clone(),
             cuc: vec![compute_streams::CucElement {
                 cuc_id: cuc_id.clone(),
                 stream_list: None,
             }],
-        })[0]
-            .clone()
+        };
 
         // TODO check if this actually works
+        let domains = self.storage.get_streams_in_domain(search_domain);
+        assert_eq!(domains.len(), 1);
+        return domains[0].clone();
     }
 }
 
 impl TopologyControllerInterface for Cnc {
     fn notify_topology_changed(&self) {
-        // println!("[CNC] TODO: got notified about TopologyChange. But doing nothing about it...");
+        // println!("[CNC] got notified about TopologyChange. But doing nothing about it...");
     }
 }

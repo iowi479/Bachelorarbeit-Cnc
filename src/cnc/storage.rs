@@ -25,6 +25,7 @@ pub trait StorageAdapterInterface {
         domains: Vec<compute_streams::Domain>,
     ) -> Vec<uni_types::Domain>;
 
+    //not used
     fn remove_all_streams(&self, cuc_id: &String);
     fn remove_stream(&self, cuc_id: &String, stream_id: String);
 
@@ -44,9 +45,12 @@ pub trait StorageAdapterInterface {
     /// If the domain or cuc_id could not be found: returns None
     fn get_domain_id_of_cuc(&self, cuc_id: String) -> Option<String>;
 
+    // not used
     fn get_all_configs(&self) -> Vec<Config>;
+    //not used
     fn get_config(&self, node_id: u32) -> Option<Config>;
 
+    // not used
     fn set_config(&self, config: Config);
     fn set_configs(&self, configs: &Vec<Config>);
 

@@ -17,7 +17,7 @@ pub trait TopologyAdapterInterface {
     /// returnes to currently available Topology
     fn get_topology(&self) -> Topology;
 
-    /// returns information about the provided node.
+    /// returns information about a specific node
     fn get_node_information(&self, id: u32) -> Option<NodeInformation>;
 
     /// running this component continously
@@ -199,6 +199,7 @@ impl MockTopology {
             cnc: Weak::default(),
         }
     }
+
     pub fn new_functioning() -> Self {
         let mut nodes: Vec<NodeInformation> = Vec::new();
         let mut connections: Vec<Connection> = Vec::new();
@@ -208,7 +209,7 @@ impl MockTopology {
         --- Mock Topology -----
                   (1)
                  /   \
-               [10]  11]
+               [10] [11]
         -----------------------
         */
 
@@ -290,12 +291,8 @@ impl MockTopology {
 
 impl TopologyAdapterInterface for MockTopology {
     fn get_node_information(&self, id: u32) -> Option<NodeInformation> {
-        for node in self.topology.read().unwrap().nodes.iter() {
-            if node.id == id {
-                return Some(node.clone());
-            }
-        }
-        return None;
+        let nodes = &self.topology.read().unwrap().nodes;
+        return nodes.iter().find(|x| x.id == id).cloned();
     }
 
     fn get_topology(&self) -> Topology {
@@ -309,6 +306,7 @@ impl TopologyAdapterInterface for MockTopology {
     fn run(&self) {
         let cnc = self.cnc.upgrade().expect(CNC_NOT_PRESENT).clone();
 
+        // this simulates a topology change every 15 seconds
         thread::spawn(move || loop {
             thread::sleep(Duration::from_secs(15));
             cnc.notify_topology_changed();
