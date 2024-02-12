@@ -1,4 +1,5 @@
 use super::types::YangModule;
+use crate::cnc::types::lldp_types::RemoteSystemsData;
 use crate::cnc::types::scheduling::PortConfiguration;
 use crate::cnc::types::topology::{Port, SSHConfigurationParams};
 use crate::cnc::types::tsn_types::BridgePortDelays;
@@ -243,6 +244,31 @@ pub fn edit_config_in_candidate(
     Ok(())
 }
 
+pub fn get_lldp_data(
+    client: &mut NetconfClient,
+    ctx: &Arc<Context>,
+) -> Result<DataTree, NetconfClientError> {
+    let get_lldp_filter = Filter {
+        filter_type: FilterType::Subtree,
+        data: "<lldp xmlns=\"urn:ieee:std:802.1AB:yang:ieee802-dot1ab-lldp\"></lldp>".to_string(),
+    };
+
+    let response = client.get(Some(get_lldp_filter))?;
+
+    let data = response.data.expect("no data in dtree");
+
+    let dtree = DataTree::parse_string(
+        ctx,
+        data.as_str(),
+        DataFormat::XML,
+        DataParserFlags::NO_VALIDATION,
+        DataValidationFlags::empty(),
+    )
+    .expect("couldnt parse data");
+
+    return Ok(dtree);
+}
+
 pub fn get_interface_data(
     client: &mut NetconfClient,
     ctx: &Arc<Context>,
@@ -306,6 +332,16 @@ fn interface_name_from_xpath(xpath: &str) -> String {
 
 fn last_node_name_from_xpath(xpath: &String) -> &str {
     xpath.split("/").last().unwrap().trim()
+}
+
+pub fn get_remote_systems(dtree: &DataTree) -> Vec<RemoteSystemsData> {
+    let mut systems: Vec<RemoteSystemsData> = Vec::new();
+
+    // TODO implement this
+    // in datatype add optionals for unused stuff
+    print_whole_datatree(dtree);
+
+    return systems;
 }
 
 pub fn get_port_delays(dtree: &DataTree) -> Vec<Port> {
