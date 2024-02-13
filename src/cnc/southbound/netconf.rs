@@ -26,6 +26,7 @@ const YANG_MODULES: &'static [YangModule] = &[
     YangModule::new("ieee802-dot1q-types"),
     YangModule::new("ieee802-dot1q-bridge-delays"),
     YangModule::new_with_features("ieee802-dot1q-sched", &["scheduled-traffic"]),
+    YangModule::new("ieee802-dot1ab-lldp"),
 ];
 
 pub fn get_netconf_connection(
@@ -335,7 +336,7 @@ fn last_node_name_from_xpath(xpath: &String) -> &str {
 }
 
 pub fn get_remote_systems(dtree: &DataTree) -> Vec<RemoteSystemsData> {
-    let mut systems: Vec<RemoteSystemsData> = Vec::new();
+    let systems: Vec<RemoteSystemsData> = Vec::new();
 
     // TODO implement this
     // in datatype add optionals for unused stuff

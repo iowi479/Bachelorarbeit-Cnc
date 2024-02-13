@@ -190,6 +190,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                     eprintln!("[Southbound] Error while closing netconf session: {:?}", e);
                 }
 
+                println!("got lldp data: {:?}", tree);
                 return get_remote_systems(&tree);
             } else {
                 eprintln!("[Southbound] couldnt parse datatree...");
