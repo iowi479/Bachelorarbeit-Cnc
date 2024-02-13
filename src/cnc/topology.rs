@@ -310,6 +310,15 @@ impl TopologyAdapterInterface for MockTopology {
         thread::spawn(move || loop {
             thread::sleep(Duration::from_secs(15));
             cnc.notify_topology_changed();
+
+            let _remote_systems = cnc.southbound.retrieve_lldp(
+                cnc.topology.get_topology().nodes[0]
+                    .clone()
+                    .configuration_params
+                    .unwrap()
+                    .clone(),
+            );
+            println!("done testing...");
         });
     }
 }
