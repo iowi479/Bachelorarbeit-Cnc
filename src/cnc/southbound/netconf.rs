@@ -27,7 +27,7 @@ const YANG_MODULES: &'static [YangModule] = &[
     YangModule::new("ieee802-dot1q-bridge-delays"),
     YangModule::new_with_features("ieee802-dot1q-sched", &["scheduled-traffic"]),
     YangModule::new("ietf-routing"),
-    YangModule::new("ieee802-dot1q-types"),
+    YangModule::new("ieee802-dot1ab-types"),
     YangModule::new("ieee802-dot1ab-lldp"),
 ];
 
