@@ -253,12 +253,21 @@ pub fn get_lldp_data(
 ) -> Result<DataTree, NetconfClientError> {
     let get_lldp_filter = Filter {
         filter_type: FilterType::Subtree,
-        data: "<lldp xmlns=\"urn:ieee:std:802.1AB:yang:ieee802-dot1ab-lldp\"></lldp>".to_string(),
+        data: "
+        <lldp xmlns=\"urn:ieee:std:802.1AB:yang:ieee802-dot1ab-lldp\">
+            <port>
+                <name></name>
+                <remote-systems-data></remote-systems-data>
+            </port>
+        </lldp>"
+            .to_string(),
     };
 
     let response = client.get(Some(get_lldp_filter))?;
 
     let data = response.data.expect("no data in dtree");
+
+    println!("{}", data);
 
     let dtree = DataTree::parse_string(
         ctx,
