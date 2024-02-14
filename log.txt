@@ -1,0 +1,130 @@
+[CNC] id: 0 - Successfully configured. Its now ready for use...
+[Storage] Successfully loaded domains
+[Storage] Successfully loaded configurations
+[Northbound] running now...
+[Scheduler] preparing computation...
+[Scheduler] computing schedule now...
+[Scheduler] computation finished 
+[Northbound] Notification: <compute_stream_completed> 
+	[Domain { domain_id: "test-domain-id", cucs: [Cuc { cuc_id: "test-cuc-id", streams: [Stream { stream_id: "00-00-00-00-00-01:00-02", failure_code: 0 }, Stream { stream_id: "00-00-00-00-00-02:00-03", failure_code: 0 }, Stream { stream_id: "00-00-00-00-00-01:00-01", failure_code: 0 }] }] }]
+[Scheduler] configuring now...
+[Southbound] Connecting to 10.2.0.1 via Netconf
+[Southbound] Connecting to 10.2.0.2 via Netconf
+[Southbound] Connecting to 10.2.0.2 via Netconf
+requesting lldp information...
+<lldp xmlns="urn:ieee:std:802.1AB:yang:ieee802-dot1ab-lldp"><port><name>sw0p2</name><dest-mac-address>00-60-65-82-c9-5b</dest-mac-address><remote-systems-data><time-mark>250881</time-mark><remote-index>5</remote-index><chassis-id-subtype>mac-address</chassis-id-subtype><chassis-id>00:25:90:94:6d:a8</chassis-id><port-id-subtype>mac-address</port-id-subtype><port-id>d0:50:99:fc:0a:da</port-id><port-desc>ens82f3</port-desc><system-name>vssrv1.infra.informatik.uni-stuttgart.de</system-name><system-description>Debian GNU/Linux 12 (bookworm) Linux 6.1.0-13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.55-1 (2023-09-29) x86_64</system-description><system-capabilities-supported>bridge wlan-access-point router station-only</system-capabilities-supported><system-capabilities-enabled>station-only</system-capabilities-enabled><management-address><address-subtype xmlns:rt="urn:ietf:params:xml:ns:yang:ietf-routing">rt:ipv4</address-subtype><address>10.1.0.100</address></management-address><management-address><address-subtype xmlns:rt="urn:ietf:params:xml:ns:yang:ietf-routing">rt:ipv6</address-subtype><address>fe80::d250:99ff:fefc:ad7</address></management-address></remote-systems-data></port><port><name>sw0p3</name><dest-mac-address>00-60-65-82-c9-5c</dest-mac-address></port><port><name>sw0p4</name><dest-mac-address>00-60-65-82-c9-5d</dest-mac-address></port><port><name>sw0p5</name><dest-mac-address>00-60-65-82-c9-5e</dest-mac-address></port><port><name>sw0p6</name><dest-mac-address>00-60-65-82-c9-5f</dest-mac-address></port><port><name>sw0ep</name><dest-mac-address>00-60-65-82-c9-5a</dest-mac-address></port></lldp>
+got lldp data: DataTree { context: Context { raw: 0x555b92696be0 }, raw: 0x7f4e040146b0 }
+<lldp xmlns="urn:ieee:std:802.1AB:yang:ieee802-dot1ab-lldp">
+  <port>
+    <name>sw0p2</name>
+    <dest-mac-address>00-60-65-82-c9-5b</dest-mac-address>
+    <remote-systems-data>
+      <time-mark>250881</time-mark>
+      <remote-index>5</remote-index>
+      <chassis-id-subtype>mac-address</chassis-id-subtype>
+      <chassis-id>00:25:90:94:6d:a8</chassis-id>
+      <port-id-subtype>mac-address</port-id-subtype>
+      <port-id>d0:50:99:fc:0a:da</port-id>
+      <port-desc>ens82f3</port-desc>
+      <system-name>vssrv1.infra.informatik.uni-stuttgart.de</system-name>
+      <system-description>Debian GNU/Linux 12 (bookworm) Linux 6.1.0-13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.55-1 (2023-09-29) x86_64</system-description>
+      <system-capabilities-supported>bridge wlan-access-point router station-only</system-capabilities-supported>
+      <system-capabilities-enabled>station-only</system-capabilities-enabled>
+      <management-address>
+        <address-subtype xmlns:rt="urn:ietf:params:xml:ns:yang:ietf-routing">rt:ipv4</address-subtype>
+        <address>10.1.0.100</address>
+      </management-address>
+      <management-address>
+        <address-subtype xmlns:rt="urn:ietf:params:xml:ns:yang:ietf-routing">rt:ipv6</address-subtype>
+        <address>fe80::d250:99ff:fefc:ad7</address>
+      </management-address>
+    </remote-systems-data>
+  </port>
+  <port>
+    <name>sw0p3</name>
+    <dest-mac-address>00-60-65-82-c9-5c</dest-mac-address>
+  </port>
+  <port>
+    <name>sw0p4</name>
+    <dest-mac-address>00-60-65-82-c9-5d</dest-mac-address>
+  </port>
+  <port>
+    <name>sw0p5</name>
+    <dest-mac-address>00-60-65-82-c9-5e</dest-mac-address>
+  </port>
+  <port>
+    <name>sw0p6</name>
+    <dest-mac-address>00-60-65-82-c9-5f</dest-mac-address>
+  </port>
+  <port>
+    <name>sw0ep</name>
+    <dest-mac-address>00-60-65-82-c9-5a</dest-mac-address>
+  </port>
+</lldp>
+done testing...
+[Scheduler] configuration finished - with 2 failed interfaces
+[Northbound] Notification: <configure_streams_completed> 
+	[Domain { domain_id: "test-domain-id", cucs: [Cuc { cuc_id: "test-cuc-id", streams: [Stream { stream_id: "00-00-00-00-00-01:00-02", failure_code: 1 }, Stream { stream_id: "00-00-00-00-00-02:00-03", failure_code: 1 }, Stream { stream_id: "00-00-00-00-00-01:00-01", failure_code: 0 }] }] }]
+[Scheduler] preparing computation...
+[Scheduler] computing schedule now...
+[Scheduler] computation finished 
+[Northbound] Notification: <compute_stream_completed> 
+	[Domain { domain_id: "test-domain-id", cucs: [Cuc { cuc_id: "test-cuc-id", streams: [Stream { stream_id: "00-00-00-00-00-01:00-02", failure_code: 0 }, Stream { stream_id: "00-00-00-00-00-02:00-03", failure_code: 0 }, Stream { stream_id: "00-00-00-00-00-01:00-01", failure_code: 0 }] }] }]
+[Scheduler] configuring now...
+[Southbound] Connecting to 10.2.0.1 via Netconf
+[Southbound] Connecting to 10.2.0.2 via Netconf
+[Southbound] Connecting to 10.2.0.2 via Netconf
+requesting lldp information...
+<lldp xmlns="urn:ieee:std:802.1AB:yang:ieee802-dot1ab-lldp"><port><name>sw0p2</name><dest-mac-address>00-60-65-82-c9-5b</dest-mac-address><remote-systems-data><time-mark>250896</time-mark><remote-index>5</remote-index><chassis-id-subtype>mac-address</chassis-id-subtype><chassis-id>00:25:90:94:6d:a8</chassis-id><port-id-subtype>mac-address</port-id-subtype><port-id>d0:50:99:fc:0a:da</port-id><port-desc>ens82f3</port-desc><system-name>vssrv1.infra.informatik.uni-stuttgart.de</system-name><system-description>Debian GNU/Linux 12 (bookworm) Linux 6.1.0-13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.55-1 (2023-09-29) x86_64</system-description><system-capabilities-supported>bridge wlan-access-point router station-only</system-capabilities-supported><system-capabilities-enabled>station-only</system-capabilities-enabled><management-address><address-subtype xmlns:rt="urn:ietf:params:xml:ns:yang:ietf-routing">rt:ipv4</address-subtype><address>10.1.0.100</address></management-address><management-address><address-subtype xmlns:rt="urn:ietf:params:xml:ns:yang:ietf-routing">rt:ipv6</address-subtype><address>fe80::d250:99ff:fefc:ad7</address></management-address></remote-systems-data></port><port><name>sw0p3</name><dest-mac-address>00-60-65-82-c9-5c</dest-mac-address></port><port><name>sw0p4</name><dest-mac-address>00-60-65-82-c9-5d</dest-mac-address></port><port><name>sw0p5</name><dest-mac-address>00-60-65-82-c9-5e</dest-mac-address></port><port><name>sw0p6</name><dest-mac-address>00-60-65-82-c9-5f</dest-mac-address></port><port><name>sw0ep</name><dest-mac-address>00-60-65-82-c9-5a</dest-mac-address></port></lldp>
+got lldp data: DataTree { context: Context { raw: 0x555b92696be0 }, raw: 0x7f4e04012160 }
+<lldp xmlns="urn:ieee:std:802.1AB:yang:ieee802-dot1ab-lldp">
+  <port>
+    <name>sw0p2</name>
+    <dest-mac-address>00-60-65-82-c9-5b</dest-mac-address>
+    <remote-systems-data>
+      <time-mark>250896</time-mark>
+      <remote-index>5</remote-index>
+      <chassis-id-subtype>mac-address</chassis-id-subtype>
+      <chassis-id>00:25:90:94:6d:a8</chassis-id>
+      <port-id-subtype>mac-address</port-id-subtype>
+      <port-id>d0:50:99:fc:0a:da</port-id>
+      <port-desc>ens82f3</port-desc>
+      <system-name>vssrv1.infra.informatik.uni-stuttgart.de</system-name>
+      <system-description>Debian GNU/Linux 12 (bookworm) Linux 6.1.0-13-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.55-1 (2023-09-29) x86_64</system-description>
+      <system-capabilities-supported>bridge wlan-access-point router station-only</system-capabilities-supported>
+      <system-capabilities-enabled>station-only</system-capabilities-enabled>
+      <management-address>
+        <address-subtype xmlns:rt="urn:ietf:params:xml:ns:yang:ietf-routing">rt:ipv4</address-subtype>
+        <address>10.1.0.100</address>
+      </management-address>
+      <management-address>
+        <address-subtype xmlns:rt="urn:ietf:params:xml:ns:yang:ietf-routing">rt:ipv6</address-subtype>
+        <address>fe80::d250:99ff:fefc:ad7</address>
+      </management-address>
+    </remote-systems-data>
+  </port>
+  <port>
+    <name>sw0p3</name>
+    <dest-mac-address>00-60-65-82-c9-5c</dest-mac-address>
+  </port>
+  <port>
+    <name>sw0p4</name>
+    <dest-mac-address>00-60-65-82-c9-5d</dest-mac-address>
+  </port>
+  <port>
+    <name>sw0p5</name>
+    <dest-mac-address>00-60-65-82-c9-5e</dest-mac-address>
+  </port>
+  <port>
+    <name>sw0p6</name>
+    <dest-mac-address>00-60-65-82-c9-5f</dest-mac-address>
+  </port>
+  <port>
+    <name>sw0ep</name>
+    <dest-mac-address>00-60-65-82-c9-5a</dest-mac-address>
+  </port>
+</lldp>
+done testing...
+[Scheduler] configuration finished - with 2 failed interfaces
+[Northbound] Notification: <configure_streams_completed> 
+	[Domain { domain_id: "test-domain-id", cucs: [Cuc { cuc_id: "test-cuc-id", streams: [Stream { stream_id: "00-00-00-00-00-01:00-02", failure_code: 1 }, Stream { stream_id: "00-00-00-00-00-02:00-03", failure_code: 1 }, Stream { stream_id: "00-00-00-00-00-01:00-01", failure_code: 0 }] }] }]
