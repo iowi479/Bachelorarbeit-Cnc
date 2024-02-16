@@ -411,7 +411,7 @@ pub fn get_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {
                             _ => eprintln!("unknown key found in management-address..."),
                         }
                     }
-                    system.management_addresses.push(address);
+                    system.management_address.push(address);
                 } else {
                     println!("parsing not implemented for {}", node_name);
                 }
