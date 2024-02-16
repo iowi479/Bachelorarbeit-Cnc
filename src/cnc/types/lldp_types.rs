@@ -7,10 +7,6 @@ pub struct RemoteSystemsData {
     pub time_mark: u32,
     /// Represents an arbitrary local integer value used to identify a remote system.
     pub remote_index: u32,
-    /// Indicates that there are too many neighbors as determined by the variable tooManyNeighbors.
-    pub remote_too_many_neighbors: bool,
-    /// Indicates that there are changes in the remote system's data, as determined by the variable remoteChanges.
-    pub remote_changes: bool,
     /// Identify the chassis associated with the remote system.
     pub chassis_id_subtype: String,
     /// Identify the chassis component associated with the remote system.

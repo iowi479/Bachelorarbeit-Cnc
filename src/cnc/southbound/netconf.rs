@@ -356,6 +356,8 @@ pub fn get_remote_systems(dtree: &DataTree) -> Vec<RemoteSystemsData> {
     return systems;
 }
 
+pub fn get_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {}
+
 pub fn get_port_delays(dtree: &DataTree) -> Vec<Port> {
     let mut ports: Vec<Port> = Vec::new();
 
