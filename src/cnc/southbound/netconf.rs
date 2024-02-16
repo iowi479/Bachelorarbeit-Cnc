@@ -358,6 +358,7 @@ pub fn get_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {
         for child_node in dnode.children() {
             let path = child_node.path();
             let node_name = last_node_name_from_xpath(&path);
+            println!("node_name: {}", node_name);
 
             let value = child_node
                 .value()
@@ -374,6 +375,11 @@ pub fn get_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {
                     "system-description" => system.system_description = v,
                     "system-capabilities-supported" => system.system_capabilities_supported = v,
                     "system-capabilities-enabled" => system.system_capabilities_enabled = v,
+                    _ => eprintln!("unknown node found in dtree..."),
+                },
+                DataValue::Uint32(v) => match node_name {
+                    "time-mark" => system.time_mark = v,
+                    "remote-index" => system.remote_index = v,
                     _ => eprintln!("unknown node found in dtree..."),
                 },
                 _ => eprintln!(
