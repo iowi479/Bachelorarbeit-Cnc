@@ -368,7 +368,7 @@ pub fn get_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {
                         "chassis-id" => system.chassis_id = v,
                         "port-id-subtype" => system.port_id_subtype = v,
                         "port-id" => system.port_id = v,
-                        "port-description" => system.port_desc = v,
+                        "port-desc" => system.port_desc = v,
                         "system-name" => system.system_name = v,
                         "system-description" => system.system_description = v,
                         "system-capabilities-supported" => system.system_capabilities_supported = v,
