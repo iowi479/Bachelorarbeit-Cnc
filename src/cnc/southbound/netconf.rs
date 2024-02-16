@@ -1,5 +1,5 @@
 use super::types::YangModule;
-use crate::cnc::types::lldp_types::RemoteSystemsData;
+use crate::cnc::types::lldp_types::{ManagementAddress, RemoteSystemsData};
 use crate::cnc::types::scheduling::PortConfiguration;
 use crate::cnc::types::topology::{Port, SSHConfigurationParams};
 use crate::cnc::types::tsn_types::BridgePortDelays;
@@ -360,32 +360,60 @@ pub fn get_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {
             let node_name = last_node_name_from_xpath(&path);
             println!("node_name: {}", node_name);
 
-            let value = child_node
-                .value()
-                .expect("no value in tree is not possible");
+            let value = child_node.value();
 
-            match value {
-                DataValue::Other(v) => match node_name {
-                    "chassis-id-subtype" => system.chassis_id_subtype = v,
-                    "chassis-id" => system.chassis_id = v,
-                    "port-id-subtype" => system.port_id_subtype = v,
-                    "port-id" => system.port_id = v,
-                    "port-description" => system.port_desc = v,
-                    "system-name" => system.system_name = v,
-                    "system-description" => system.system_description = v,
-                    "system-capabilities-supported" => system.system_capabilities_supported = v,
-                    "system-capabilities-enabled" => system.system_capabilities_enabled = v,
-                    _ => eprintln!("unknown node found in dtree..."),
-                },
-                DataValue::Uint32(v) => match node_name {
-                    "time-mark" => system.time_mark = v,
-                    "remote-index" => system.remote_index = v,
-                    _ => eprintln!("unknown node found in dtree..."),
-                },
-                _ => eprintln!(
-                    "found an unexpected node in dtree {:?} {}",
-                    value, node_name
-                ),
+            if let Some(value) = value {
+                match value {
+                    DataValue::Other(v) => match node_name {
+                        "chassis-id-subtype" => system.chassis_id_subtype = v,
+                        "chassis-id" => system.chassis_id = v,
+                        "port-id-subtype" => system.port_id_subtype = v,
+                        "port-id" => system.port_id = v,
+                        "port-description" => system.port_desc = v,
+                        "system-name" => system.system_name = v,
+                        "system-description" => system.system_description = v,
+                        "system-capabilities-supported" => system.system_capabilities_supported = v,
+                        "system-capabilities-enabled" => system.system_capabilities_enabled = v,
+                        _ => eprintln!("unknown node found in dtree..."),
+                    },
+                    DataValue::Uint32(v) => match node_name {
+                        "time-mark" => system.time_mark = v,
+                        "remote-index" => system.remote_index = v,
+                        _ => eprintln!("unknown node found in dtree..."),
+                    },
+                    _ => eprintln!(
+                        "found an unexpected node in dtree {:?} {}",
+                        value, node_name
+                    ),
+                }
+            } else {
+                // management-address has no value since the parameters are in the xpath
+                if node_name.starts_with("management-address") {
+                    let params = node_name.replace("management-address", "");
+                    let attribs = params
+                        .split("][")
+                        .map(|x| {
+                            let x = x.replace("[", "");
+                            let x = x.replace("]", "");
+                            return x.replace("'", "");
+                        })
+                        .collect::<Vec<String>>();
+
+                    let mut address: ManagementAddress = ManagementAddress::new();
+                    for attrib in attribs {
+                        let parts = attrib.split("=").collect::<Vec<&str>>();
+                        let key = parts[0];
+                        let value = parts[1];
+
+                        match key {
+                            "address-type" => address.address_subtype = value.to_string(),
+                            "address" => address.address = value.to_string(),
+                            _ => eprintln!("unknown key found in management-address..."),
+                        }
+                    }
+                } else {
+                    println!("parsing not implemented for {}", node_name);
+                }
             }
         }
 
