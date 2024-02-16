@@ -1,6 +1,3 @@
-use self::netconf::{
-    create_yang_context, get_config_interfaces, get_remote_systems, put_config_in_dtree,
-};
 use super::types::lldp_types::RemoteSystemsData;
 use super::types::scheduling::{PortConfiguration, Schedule};
 use super::types::topology::{Port, SSHConfigurationParams, Topology};
@@ -8,8 +5,9 @@ use super::types::tsn_types::GroupInterfaceId;
 use super::types::{FailedInterface, FailedInterfaces};
 use super::Cnc;
 use crate::cnc::southbound::netconf::{
-    edit_config_in_candidate, get_interface_data, get_lldp_data, get_netconf_connection,
-    get_port_delays,
+    create_yang_context, edit_config_in_candidate, get_config_interfaces, get_interface_data,
+    get_lldp_data, get_netconf_connection, get_port_delays, get_remote_systems_data,
+    put_config_in_dtree,
 };
 use crate::cnc::types::scheduling::Config;
 use netconf_client::errors::NetconfClientError;
@@ -191,7 +189,9 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                 }
 
                 println!("got lldp data: {:?}", tree);
-                return get_remote_systems(&tree);
+                let remote_systems = get_remote_systems_data(&tree);
+                println!("remote systems: {:?}", remote_systems);
+                return remote_systems;
             } else {
                 eprintln!("[Southbound] couldnt parse datatree...");
             }

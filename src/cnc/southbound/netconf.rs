@@ -346,17 +346,48 @@ fn last_node_name_from_xpath(xpath: &String) -> &str {
     xpath.split("/").last().unwrap().trim()
 }
 
-pub fn get_remote_systems(dtree: &DataTree) -> Vec<RemoteSystemsData> {
-    let systems: Vec<RemoteSystemsData> = Vec::new();
+pub fn get_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {
+    let mut remote_systems: Vec<RemoteSystemsData> = Vec::new();
 
-    // TODO implement this
-    // in datatype add optionals for unused stuff
-    print_whole_datatree(dtree);
+    for dnode in dtree
+        .find_xpath("/ieee802-dot1ab-lldp:lldp/port/remote-systems-data")
+        .expect("no remote-systems-data found")
+    {
+        let mut system = RemoteSystemsData::new();
 
-    return systems;
+        for child_node in dnode.children() {
+            let path = child_node.path();
+            let node_name = last_node_name_from_xpath(&path);
+
+            let value = child_node
+                .value()
+                .expect("no value in tree is not possible");
+
+            match value {
+                DataValue::Other(v) => match node_name {
+                    "chassis-id-subtype" => system.chassis_id_subtype = v,
+                    "chassis-id" => system.chassis_id = v,
+                    "port-id-subtype" => system.port_id_subtype = v,
+                    "port-id" => system.port_id = v,
+                    "port-description" => system.port_desc = v,
+                    "system-name" => system.system_name = v,
+                    "system-description" => system.system_description = v,
+                    "system-capabilities-supported" => system.system_capabilities_supported = v,
+                    "system-capabilities-enabled" => system.system_capabilities_enabled = v,
+                    _ => eprintln!("unknown node found in dtree..."),
+                },
+                _ => eprintln!(
+                    "found an unexpected node in dtree {:?} {}",
+                    value, node_name
+                ),
+            }
+        }
+
+        remote_systems.push(system);
+    }
+
+    return remote_systems;
 }
-
-pub fn get_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {}
 
 pub fn get_port_delays(dtree: &DataTree) -> Vec<Port> {
     let mut ports: Vec<Port> = Vec::new();
