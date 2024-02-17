@@ -1,14 +1,14 @@
 module ietf-routing {
-  yang-version 1.1;
+  yang-version "1.1";
   namespace "urn:ietf:params:xml:ns:yang:ietf-routing";
-  prefix rt;
+  prefix "rt";
 
   import ietf-yang-types {
-    prefix yang;
+    prefix "yang";
   }
 
   import ietf-interfaces {
-    prefix if;
+    prefix "if";
     description
       "An 'ietf-interfaces' module version that is compatible with
        the Network Management Datastore Architecture (NMDA)
@@ -18,15 +18,16 @@ module ietf-routing {
   organization
     "IETF NETMOD (Network Modeling) Working Group";
   contact
-    "WG Web:   &lt;https://datatracker.ietf.org/wg/netmod/&gt;
-     WG List:  &lt;mailto:rtgwg@ietf.org&gt;
+    "WG Web:   <https://datatracker.ietf.org/wg/netmod/>
+     WG List:  <mailto:rtgwg@ietf.org>
 
      Editor:   Ladislav Lhotka
-               &lt;mailto:lhotka@nic.cz&gt;
+               <mailto:lhotka@nic.cz>
                Acee Lindem
-               &lt;mailto:acee@cisco.com&gt;
+               <mailto:acee@cisco.com>
                Yingzhen Qu
-               &lt;mailto:yingzhen.qu@huawei.com&gt;";
+               <mailto:yingzhen.qu@huawei.com>";
+
   description
     "This YANG module defines essential components for the management
      of a routing subsystem.  The model fully conforms to the Network
@@ -51,13 +52,15 @@ module ietf-routing {
       "RFC 8349: A YANG Data Model for Routing Management
                  (NMDA Version)";
   }
+
   revision 2016-11-04 {
-    description
-      "Initial revision.";
-    reference
-      "RFC 8022: A YANG Data Model for Routing Management";
+       description
+         "Initial revision.";
+       reference
+         "RFC 8022: A YANG Data Model for Routing Management";
   }
 
+  /* Features */
   feature multiple-ribs {
     description
       "This feature indicates that the server supports
@@ -80,12 +83,13 @@ module ietf-routing {
        specific.";
   }
 
+  /* Identities */
+
   identity address-family {
     description
       "Base identity from which identities describing address
        families are derived.";
   }
-
   identity ipv4 {
     base address-family;
     description
@@ -124,11 +128,15 @@ module ietf-routing {
       "'Static' routing pseudo-protocol.";
   }
 
+  /* Type Definitions */
+
   typedef route-preference {
     type uint32;
     description
       "This type is used for route preferences.";
   }
+
+  /* Groupings */
 
   grouping address-family {
     description
@@ -163,23 +171,23 @@ module ietf-routing {
        next hops.";
     leaf special-next-hop {
       type enumeration {
-        enum "blackhole" {
+        enum blackhole {
           description
             "Silently discard the packet.";
         }
-        enum "unreachable" {
+        enum unreachable {
           description
             "Discard the packet and notify the sender with an error
              message indicating that the destination host is
              unreachable.";
         }
-        enum "prohibit" {
+        enum prohibit {
           description
             "Discard the packet and notify the sender with an error
              message indicating that the communication is
              administratively prohibited.";
         }
-        enum "receive" {
+        enum receive {
           description
             "The packet will be received by the local system.";
         }
@@ -213,11 +221,9 @@ module ietf-routing {
             "Name of the outgoing interface.";
         }
       }
-
       case special-next-hop {
         uses special-next-hop;
       }
-
       case next-hop-list {
         container next-hop-list {
           description
@@ -238,7 +244,6 @@ module ietf-routing {
                  The value of this index has no semantic meaning
                  other than for referencing the entry.";
             }
-
             leaf outgoing-interface {
               type if:interface-ref;
               description
@@ -275,11 +280,9 @@ module ietf-routing {
             "Name of the outgoing interface.";
         }
       }
-
       case special-next-hop {
         uses special-next-hop;
       }
-
       case next-hop-list {
         container next-hop-list {
           description
@@ -314,7 +317,6 @@ module ietf-routing {
         "Type of the routing protocol from which the route
          originated.";
     }
-
     leaf active {
       type empty;
       description
@@ -322,7 +324,6 @@ module ietf-routing {
          preferred among all routes in the same RIB that have the
          same destination prefix.";
     }
-
     leaf last-updated {
       type yang:date-and-time;
       description
@@ -331,6 +332,8 @@ module ietf-routing {
          inserted into the RIB.";
     }
   }
+
+  /* Data nodes */
 
   container routing {
     description
@@ -342,7 +345,6 @@ module ietf-routing {
          that use a router ID can use this parameter or override it
          with another value.";
     }
-
     container interfaces {
       config false;
       description
@@ -354,7 +356,6 @@ module ietf-routing {
            network-layer interface.";
       }
     }
-
     container control-plane-protocols {
       description
         "Support for control-plane protocol instances.";
@@ -371,21 +372,18 @@ module ietf-routing {
              derived from the 'control-plane-protocol'
              base identity.";
         }
-
         leaf name {
           type string;
           description
             "An arbitrary name of the control-plane protocol
              instance.";
         }
-
         leaf description {
           type string;
           description
             "Textual description of the control-plane protocol
              instance.";
         }
-
         container static-routes {
           when "derived-from-or-self(../type, 'rt:static')" {
             description
@@ -400,7 +398,6 @@ module ietf-routing {
         }
       }
     }
-
     container ribs {
       description
         "Support for RIBs.";
@@ -426,7 +423,6 @@ module ietf-routing {
              For user-controlled entries, an arbitrary name can be
              used.";
         }
-
         uses address-family {
           description
             "The address family of the system-controlled RIB.";
@@ -444,7 +440,6 @@ module ietf-routing {
              By default, control-plane protocols place their routes
              in the default RIBs.";
         }
-
         container routes {
           config false;
           description
@@ -463,23 +458,14 @@ module ietf-routing {
                  smaller value indicates a route that is
                  more preferred.";
             }
-
             container next-hop {
               description
                 "Route's next-hop attribute.";
               uses next-hop-state-content;
             }
-
             uses route-metadata;
           }
         }
-
-        leaf description {
-          type string;
-          description
-            "Textual description of the RIB.";
-        }
-
         action active-route {
           description
             "Return the active RIB route that is used for the
@@ -487,7 +473,6 @@ module ietf-routing {
 
              Address-family-specific modules MUST augment input
              parameters with a leaf named 'destination-address'.";
-
           output {
             container route {
               description
@@ -503,15 +488,24 @@ module ietf-routing {
                   "Route's next-hop attribute.";
                 uses next-hop-state-content;
               }
-
               uses route-metadata;
             }
           }
+        }
+        leaf description {
+          type string;
+          description
+            "Textual description of the RIB.";
         }
       }
     }
   }
 
+  /*
+   * The subsequent data nodes are obviated and obsoleted
+   * by the Network Management Datastore Architecture
+   * as described in RFC 8342.
+   */
   container routing-state {
     config false;
     status obsolete;
@@ -525,7 +519,6 @@ module ietf-routing {
          It may be either configured or assigned algorithmically by
          the implementation.";
     }
-
     container interfaces {
       status obsolete;
       description
@@ -538,7 +531,6 @@ module ietf-routing {
            network-layer interface.";
       }
     }
-
     container control-plane-protocols {
       status obsolete;
       description
@@ -561,7 +553,6 @@ module ietf-routing {
           description
             "Type of the control-plane protocol.";
         }
-
         leaf name {
           type string;
           status obsolete;
@@ -574,7 +565,6 @@ module ietf-routing {
         }
       }
     }
-
     container ribs {
       status obsolete;
       description
@@ -596,13 +586,11 @@ module ietf-routing {
           description
             "The name of the RIB.";
         }
-
         uses address-family {
           status obsolete;
           description
             "The address family of the RIB.";
         }
-
         leaf default-rib {
           if-feature "multiple-ribs";
           type boolean;
@@ -615,7 +603,6 @@ module ietf-routing {
              By default, control-plane protocols place their routes
              in the default RIBs.";
         }
-
         container routes {
           status obsolete;
           description
@@ -636,7 +623,6 @@ module ietf-routing {
                  smaller value indicates a route that is
                  more preferred.";
             }
-
             container next-hop {
               status obsolete;
               description
@@ -647,7 +633,6 @@ module ietf-routing {
                   "Route's next-hop attribute operational state.";
               }
             }
-
             uses route-metadata {
               status obsolete;
               description
@@ -655,7 +640,6 @@ module ietf-routing {
             }
           }
         }
-
         action active-route {
           status obsolete;
           description
@@ -664,7 +648,6 @@ module ietf-routing {
 
              Address-family-specific modules MUST augment input
              parameters with a leaf named 'destination-address'.";
-
           output {
             container route {
               status obsolete;
@@ -687,7 +670,6 @@ module ietf-routing {
                     "Active route state data.";
                 }
               }
-
               uses route-metadata {
                 status obsolete;
                 description
