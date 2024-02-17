@@ -35,7 +35,6 @@ impl MockTSNScheduler {
 
     /// returnes a fake configuration. All in there is hardcoded and specifically for the topology in the TopologyComponent.
     pub fn compute_fake(&self, topology: &Topology, domains: &Vec<Domain>) -> ComputationResult {
-        thread::sleep(Duration::from_secs(2));
         let acc_latency = 50000;
 
         let mut domains = domains.clone(); // copy since we do modifications to it

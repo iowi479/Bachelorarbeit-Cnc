@@ -655,12 +655,8 @@ impl NorthboundAdapterInterface for MockInsertStreamAdapter {
 
         println!("[Northbound] running now...");
         thread::spawn(move || {
-            thread::sleep(Duration::from_secs(2));
-
             // set stream-data
             cnc.set_streams(&cuc_id, MockInsertStreamAdapter::get_example_add_stream());
-
-            thread::sleep(Duration::from_secs(10));
             cnc.set_operating(false);
         });
     }
@@ -687,14 +683,9 @@ impl NorthboundAdapterInterface for MockRemoveStreamAdapter {
 
         println!("[Northbound] running now...");
         thread::spawn(move || {
-            thread::sleep(Duration::from_secs(2));
-
             // remove stream
             let res = cnc.remove_streams(&cuc_id, vec![String::from("00-00-00-00-00-01:00-01")]);
-
             println!("[Northbound] response to remove_streams {res:?}", res = res);
-
-            thread::sleep(Duration::from_secs(2));
             cnc.set_operating(false);
         });
     }
@@ -721,8 +712,6 @@ impl NorthboundAdapterInterface for MockComputeStreamAdapter {
 
         println!("[Northbound] running now...");
         thread::spawn(move || {
-            thread::sleep(Duration::from_secs(2));
-
             // start a scheduling run
             let domain: Vec<compute_streams::Domain> = vec![compute_streams::Domain {
                 domain_id: cnc.domain.clone(),
@@ -732,8 +721,6 @@ impl NorthboundAdapterInterface for MockComputeStreamAdapter {
                 }],
             }];
             cnc.compute_streams(ComputationType::All(domain));
-
-            thread::sleep(Duration::from_secs(2));
             cnc.set_operating(false);
         });
     }
@@ -760,8 +747,6 @@ impl NorthboundAdapterInterface for MockGetStreamAdapter {
 
         println!("[Northbound] running now...");
         thread::spawn(move || {
-            thread::sleep(Duration::from_secs(2));
-
             // get streams
             let res = cnc.get_streams(&cuc_id);
 
@@ -769,8 +754,6 @@ impl NorthboundAdapterInterface for MockGetStreamAdapter {
             // TODO do more tests here
             assert_eq!(res.cuc[0].stream.len(), 3);
             println!("[Northbound] response to get_streams {res:?}", res = res);
-
-            thread::sleep(Duration::from_secs(2));
             cnc.set_operating(false);
         });
     }
