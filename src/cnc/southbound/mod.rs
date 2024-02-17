@@ -1,3 +1,5 @@
+use self::netconf::YANG_MODULES;
+
 use super::types::lldp_types::RemoteSystemsData;
 use super::types::scheduling::{PortConfiguration, Schedule};
 use super::types::topology::{Port, SSHConfigurationParams, Topology};
@@ -58,7 +60,7 @@ impl NetconfAdapter {
     pub fn new() -> Self {
         Self {
             cnc: Weak::default(),
-            yang_ctx: create_yang_context(),
+            yang_ctx: create_yang_context(YANG_MODULES),
         }
     }
 }

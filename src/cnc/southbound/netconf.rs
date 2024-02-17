@@ -17,7 +17,7 @@ use yang2::schema::DataValue;
 const SEARCH_DIR: &str = "./assets/yang/";
 
 /// all yang-models to load have to be included here.
-const YANG_MODULES: &'static [YangModule] = &[
+pub const YANG_MODULES: &'static [YangModule] = &[
     YangModule::new_with_features("ietf-interfaces", "2018-02-20", &["if-mib"]),
     YangModule::new("ietf-yang-types", "2013-07-15"),
     YangModule::new("iana-if-type", "2017-01-19"),
@@ -310,7 +310,7 @@ pub fn get_interface_data(
 }
 
 /// Initialize context for working with the yang models. This only gets called on startup.
-pub fn create_yang_context() -> Arc<Context> {
+pub fn create_yang_context(yang_modules: &[YangModule]) -> Arc<Context> {
     let mut ctx =
         Context::new(ContextFlags::NO_YANGLIBRARY).expect("Failed to create yang-context");
     ctx.set_searchdir(SEARCH_DIR)
