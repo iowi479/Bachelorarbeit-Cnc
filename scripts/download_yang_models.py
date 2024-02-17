@@ -1,6 +1,8 @@
 import re
 from ncclient import manager
 
+# This script is modified from: http://yang.ciscolive.com/pod0/labs/lab5/lab5-m3
+# 
 # This script is for downloading present Yang-models from a switch
 # This is only tested on the specifc B&R Switch used in the corrseponding bachelor-thesis
 
@@ -12,7 +14,7 @@ with manager.connect(
     hostkey_verify=False
 ) as m:
     capabilities = []
-
+    
     for capability in m.server_capabilities:
          capabilities.append(capability)
 
