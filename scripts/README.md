@@ -1,8 +1,16 @@
-# Manual Netconf requests
+# Downloading Yang-Models from the Switch
 
-sending a message with "]]>]]>"
+The provided Pythonscript enables you to download all advertised models in the servers <hello> Message.
+Unfortunately the used B&R-Switch doesnt announce all used Yang-Models properly so the rest has to be downloaded manually.
 
-## \<hello> response
+## using the provided python script
+All Libraries can be installed via pip and the script can be run without any arguments.
+
+## Manual Netconf requests
+For Netconf 1.0 Messages are send, when ending with "]]>]]>".
+For Netconf 1.1 the bytesize has to be provided which is not as easy to do manually, so we just use 1.0.
+
+### \<hello> response
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <hello xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
@@ -12,7 +20,7 @@ sending a message with "]]>]]>"
 </hello>
 ```
 
-## \<get-schema> for downloading a specific yang-model
+### \<get-schema> for downloading a specific yang-model
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <rpc xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="1">
@@ -23,7 +31,7 @@ sending a message with "]]>]]>"
 </rpc>
 ```
 
-## \<get> all yang-models present on the switch
+### \<get> all yang-models present on the switch
 ```xml
 <?xml version="1.0" encoding="utf-8"?>
 <rpc xmlns="urn:ietf:params:xml:ns:netconf:base:1.0" message-id="2">
