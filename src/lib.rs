@@ -13,29 +13,23 @@ mod tests {
     use crate::cnc::types::uni_types::compute_streams::{CucElement, Domain};
     use crate::cnc::types::uni_types::StreamStatus;
     use crate::cnc::Cnc;
+    use serial_test::serial;
+    use std::fs::File;
+    use std::io::prelude::*;
     use std::sync::Arc;
 
     #[test]
-    fn test_insert_stream() {
+    #[serial]
+    fn insert_streams() {
         // Configuration for CNC
         let id: u32 = 0;
         let domain: String = String::from("test-domain-id");
 
-        // check storage
-        let storage = FileStorage::new();
-        storage.configure_storage();
-        let storage_domain = storage.get_streams_in_domain(Domain {
-            domain_id: domain.clone(),
-            cuc: vec![CucElement {
-                cuc_id: String::from("test-cuc-id"),
-                stream_list: None,
-            }],
-        });
-
-        assert!(storage_domain.len() > 0);
-        assert!(storage_domain[0].cuc.len() > 0);
-        assert_eq!(storage_domain[0].cuc[0].stream.len(), 0);
-        drop(storage);
+        // This does only work for the preimplemented Filestorage
+        let bspstorage = r#"[{"domain_id":"test-domain-id","cnc_enabled":true,"cuc":[{"cuc_id":"test-cuc-id","stream":[]}]}]"#;
+        let mut file = File::create("domain_storage.json").expect("couldnt create file");
+        file.write_all(bspstorage.as_bytes())
+            .expect("couldnt write to file");
 
         // Create needed Components
         let northbound = MockInsertStreamAdapter::new(String::from("test-cuc-id"));
@@ -82,36 +76,20 @@ mod tests {
     }
 
     #[test]
-    fn test_remove_stream() {
+    #[serial]
+    fn remove_stream() {
         // Configuration for CNC
         let id: u32 = 0;
         let domain: String = String::from("test-domain-id");
 
-        // check storage
-        let storage = FileStorage::new();
-        storage.configure_storage();
-        let storage_domain = storage.get_streams_in_domain(Domain {
-            domain_id: domain.clone(),
-            cuc: vec![CucElement {
-                cuc_id: String::from("test-cuc-id"),
-                stream_list: None,
-            }],
-        });
-
-        let mut stream_contained = false;
-        for stream in storage_domain[0].cuc[0].stream.iter() {
-            if stream.stream_id == String::from("00-00-00-00-00-01:00-01") {
-                stream_contained = true;
-            }
-        }
-        assert!(stream_contained, "stream to remove is not present");
-        drop(storage);
+        // create precondition
+        insert_streams();
 
         // Create needed Components
         let northbound = MockRemoveStreamAdapter::new(String::from("test-cuc-id"));
         let southbound = NetconfAdapter::new();
         let storage = FileStorage::new();
-        let topology = MockTopology::new_failing();
+        let topology = MockTopology::new_functioning();
         let scheduler = MockTSNScheduler::new();
 
         Cnc::run(
@@ -143,14 +121,17 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     /// TODO implement this test
-    fn test_compute_all() {
+    fn compute_all() {
         // Configuration for CNC
         let id: u32 = 0;
         let domain: String = String::from("test-domain-id");
 
         // this inserts streams
-        test_insert_stream();
+        insert_streams();
+
+        println!("precondition is established");
 
         // Create needed Components
         let northbound = MockComputeStreamAdapter::new(String::from("test-cuc-id"));
@@ -168,6 +149,8 @@ mod tests {
             Arc::new(topology),
             Arc::new(scheduler),
         );
+
+        println!("finished running the fake scheduler");
 
         // check storage for configuration
         // check storage for configured and attribs on streams
@@ -211,10 +194,10 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_get_all() {
-        // TODO does this work?
-        test_insert_stream();
-        // now the storage is filled with streams
+        // create precondition
+        insert_streams();
 
         let domain: String = String::from("test-domain-id");
         let storage = FileStorage::new();
@@ -229,14 +212,13 @@ mod tests {
 
         assert!(storage_domain.len() > 0);
         assert!(storage_domain[0].cuc.len() > 0);
-
         let streams = &storage_domain[0].cuc[0].stream;
-
         assert_eq!(streams.len(), 3);
         drop(storage);
     }
 
     #[test]
+    #[serial]
     fn test_lldp_neighbours() {
         let config = SSHConfigurationParams {
             username: String::from("admin"),
