@@ -1,11 +1,13 @@
-use self::netconf::{create_yang_context, get_config_interfaces, put_config_in_dtree};
+use super::types::lldp_types::RemoteSystemsData;
 use super::types::scheduling::{PortConfiguration, Schedule};
 use super::types::topology::{Port, SSHConfigurationParams, Topology};
 use super::types::tsn_types::GroupInterfaceId;
 use super::types::{FailedInterface, FailedInterfaces};
 use super::Cnc;
 use crate::cnc::southbound::netconf::{
-    edit_config_in_candidate, get_interface_data, get_netconf_connection, get_port_delays,
+    create_yang_context, edit_config_in_candidate, get_config_interfaces, get_interface_data,
+    get_lldp_data, get_netconf_connection, get_port_delays, get_remote_systems_data,
+    put_config_in_dtree,
 };
 use crate::cnc::types::scheduling::Config;
 use netconf_client::errors::NetconfClientError;
@@ -35,6 +37,9 @@ pub trait SouthboundAdapterInterface {
 
     /// requests the bridge-delay parameter of a specific bridge
     fn retrieve_station_capibilities(&self, config_params: SSHConfigurationParams) -> Vec<Port>;
+
+    /// requests the lldp parameter of a specific bridge
+    fn retrieve_lldp(&self, config_params: SSHConfigurationParams) -> Vec<RemoteSystemsData>;
 
     /// # CNC Configuration
     /// Minimum requirement:
@@ -67,7 +72,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
             interfaces: Vec::new(),
         };
 
-        for configuration in schedule.configs.iter() {
+        'configloop: for configuration in schedule.configs.iter() {
             // check if connection is already established
             if let Some(client) = configured_nodes.get_mut(&configuration.node_id) {
                 let config_result = self.configure_node(client, &configuration.port);
@@ -76,18 +81,13 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                         .get_mut(&configuration.node_id)
                         .unwrap()
                         .push(configuration.clone());
-                    continue;
+                    continue 'configloop;
                 }
             } else {
                 let node = topology.get_node_from_id(configuration.node_id);
 
                 if let Some(node) = node {
                     let config_params = node.configuration_params.unwrap();
-
-                    println!(
-                        "[Southbound] Connecting to {} via Netconf",
-                        &config_params.ip
-                    );
 
                     match get_netconf_connection(&config_params) {
                         Err(e) => {
@@ -100,7 +100,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                                 configured_nodes.insert(configuration.node_id, client);
                                 node_configurations
                                     .insert(configuration.node_id, vec![configuration.clone()]);
-                                continue;
+                                continue 'configloop;
                             }
                         }
                     }
@@ -122,7 +122,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
             });
         }
 
-        if configured_nodes.len() == schedule.configs.len() {
+        if failed_interfaces.interfaces.len() == 0 {
             for (node_id, client) in configured_nodes.iter_mut() {
                 let commit_result = client.commit();
 
@@ -167,6 +167,23 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                 }
 
                 return get_port_delays(&dtree);
+            } else {
+                eprintln!("[Southbound] couldnt parse datatree...");
+            }
+        } else {
+            eprintln!("[Southbound] couldnt connect to bridge...");
+        }
+        return Vec::new();
+    }
+
+    fn retrieve_lldp(&self, config_params: SSHConfigurationParams) -> Vec<RemoteSystemsData> {
+        if let Ok(mut client) = get_netconf_connection(&config_params) {
+            if let Ok(tree) = get_lldp_data(&mut client, &self.yang_ctx) {
+                if let Err(e) = client.close_session() {
+                    eprintln!("[Southbound] Error while closing netconf session: {:?}", e);
+                }
+
+                return get_remote_systems_data(&tree);
             } else {
                 eprintln!("[Southbound] couldnt parse datatree...");
             }
