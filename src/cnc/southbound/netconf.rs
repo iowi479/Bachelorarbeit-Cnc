@@ -264,11 +264,7 @@ pub fn get_lldp_data(
     };
 
     let response = client.get(Some(get_lldp_filter))?;
-
     let data = response.data.expect("no data in dtree");
-
-    println!("{}", data);
-
     let dtree = DataTree::parse_string(
         ctx,
         data.as_str(),
