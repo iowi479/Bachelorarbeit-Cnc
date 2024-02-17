@@ -72,7 +72,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
             interfaces: Vec::new(),
         };
 
-        for configuration in schedule.configs.iter() {
+        'configloop: for configuration in schedule.configs.iter() {
             // check if connection is already established
             if let Some(client) = configured_nodes.get_mut(&configuration.node_id) {
                 let config_result = self.configure_node(client, &configuration.port);
@@ -81,18 +81,13 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                         .get_mut(&configuration.node_id)
                         .unwrap()
                         .push(configuration.clone());
-                    continue;
+                    continue 'configloop;
                 }
             } else {
                 let node = topology.get_node_from_id(configuration.node_id);
 
                 if let Some(node) = node {
                     let config_params = node.configuration_params.unwrap();
-
-                    println!(
-                        "[Southbound] Connecting to {} via Netconf",
-                        &config_params.ip
-                    );
 
                     match get_netconf_connection(&config_params) {
                         Err(e) => {
@@ -105,7 +100,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                                 configured_nodes.insert(configuration.node_id, client);
                                 node_configurations
                                     .insert(configuration.node_id, vec![configuration.clone()]);
-                                continue;
+                                continue 'configloop;
                             }
                         }
                     }
@@ -127,7 +122,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
             });
         }
 
-        if configured_nodes.len() == schedule.configs.len() {
+        if failed_interfaces.interfaces.len() == 0 {
             for (node_id, client) in configured_nodes.iter_mut() {
                 let commit_result = client.commit();
 

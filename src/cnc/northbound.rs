@@ -733,7 +733,8 @@ impl NorthboundAdapterInterface for MockComputeStreamAdapter {
             }];
             cnc.compute_streams(ComputationType::All(domain));
 
-            thread::sleep(Duration::from_secs(10));
+            thread::sleep(Duration::from_secs(2));
+            cnc.set_operating(false);
         });
     }
 }

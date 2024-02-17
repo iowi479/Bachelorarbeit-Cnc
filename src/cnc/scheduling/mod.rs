@@ -133,7 +133,13 @@ impl MockTSNScheduler {
             }
         }
 
-        let bridges: Vec<u32> = vec![1, 2];
+        let mut bridges: Vec<u32> = Vec::new();
+        for ele in topology.nodes.iter() {
+            if ele.id < 10 {
+                // is a bridge
+                bridges.push(ele.id);
+            }
+        }
 
         let result = ComputationResult {
             schedule: self.parse_to_schedule(bridges, topology),
