@@ -8,20 +8,24 @@ pub struct YangModule {
 impl YangModule {
     /// this returnes a YangModule with only the name specified.
     /// No specific revisions or features are loaded.
-    pub const fn new(name: &'static str) -> Self {
+    pub const fn new(name: &'static str, revision: &'static str) -> Self {
         Self {
             name,
-            revision: None,
+            revision: Some(revision),
             features: &[],
         }
     }
 
     /// this returnes a YangModule with the name and features to load specified.
     /// No specific revisions are loaded.
-    pub const fn new_with_features(name: &'static str, features: &'static [&'static str]) -> Self {
+    pub const fn new_with_features(
+        name: &'static str,
+        revision: &'static str,
+        features: &'static [&'static str],
+    ) -> Self {
         Self {
             name,
-            revision: None,
+            revision: Some(revision),
             features,
         }
     }

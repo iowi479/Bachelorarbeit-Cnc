@@ -17,14 +17,18 @@ const SEARCH_DIR: &str = "./assets/yang/";
 
 /// all yang-models to load have to be included here.
 const YANG_MODULES: &'static [YangModule] = &[
-    YangModule::new("ietf-interfaces"), // downloaded because the switch didnt return it...
-    YangModule::new("ietf-yang-types"), // rest is downloaded from the b&r switch
-    YangModule::new("iana-if-type"),
-    YangModule::new("ieee802-types"),
-    YangModule::new("ieee802-dot1q-bridge"),
-    YangModule::new("ieee802-dot1q-types"),
-    YangModule::new("ieee802-dot1q-bridge-delays"),
-    YangModule::new_with_features("ieee802-dot1q-sched", &["scheduled-traffic"]),
+    YangModule::new_with_features("ietf-interfaces", "2018-02-20", &["if-mib"]),
+    YangModule::new("ietf-yang-types", "2013-07-15"),
+    YangModule::new("iana-if-type", "2017-01-19"),
+    YangModule::new("ieee802-types", "2020-10-23"),
+    YangModule::new("ieee802-dot1q-bridge", "2020-11-07"),
+    YangModule::new("ieee802-dot1q-types", "2020-10-24"),
+    YangModule::new("ieee802-dot1q-bridge-delays", "2021-11-23"),
+    YangModule::new("ieee802-dot1q-preemption", "2018-09-10"),
+    YangModule::new_with_features("ieee802-dot1q-sched", "2018-09-11", &["scheduled-traffic"]),
+    YangModule::new("ietf-routing", "2018-03-13"),
+    YangModule::new("ieee802-dot1ab-types", "2018-10-03"),
+    YangModule::new("ieee802-dot1ab-lldp", "2018-11-13"),
 ];
 
 pub fn get_netconf_connection(
