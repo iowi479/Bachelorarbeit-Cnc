@@ -1,5 +1,4 @@
-use self::netconf::YANG_MODULES;
-
+use self::types::NetconfConnection;
 use super::types::lldp_types::RemoteSystemsData;
 use super::types::scheduling::{PortConfiguration, Schedule};
 use super::types::topology::{Port, SSHConfigurationParams, Topology};
@@ -7,17 +6,13 @@ use super::types::tsn_types::GroupInterfaceId;
 use super::types::{FailedInterface, FailedInterfaces};
 use super::Cnc;
 use crate::cnc::southbound::netconf::{
-    create_yang_context, edit_config_in_candidate, get_config_interfaces, get_interface_data,
-    get_lldp_data, get_netconf_connection, get_port_delays, get_remote_systems_data,
-    put_config_in_dtree,
+    edit_config_in_candidate, get_config_interfaces, get_interface_data, get_lldp_data,
+    get_netconf_connection, get_port_delays, get_remote_systems_data, put_config_in_dtree,
 };
 use crate::cnc::types::scheduling::Config;
 use netconf_client::errors::NetconfClientError;
-use netconf_client::netconf_client::NetconfClient;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::sync::Weak;
-use yang2::context::Context;
 
 mod netconf;
 pub mod types;
@@ -33,7 +28,7 @@ pub trait SouthboundAdapterInterface {
     /// this configures a node-port on the given client
     fn configure_node(
         &self,
-        client: &mut NetconfClient,
+        netconf_connection: &mut NetconfConnection,
         config: &PortConfiguration,
     ) -> Result<(), NetconfClientError>;
 
@@ -53,21 +48,19 @@ pub trait SouthboundAdapterInterface {
 
 pub struct NetconfAdapter {
     cnc: Weak<Cnc>,
-    yang_ctx: Arc<Context>,
 }
 
 impl NetconfAdapter {
     pub fn new() -> Self {
         Self {
             cnc: Weak::default(),
-            yang_ctx: create_yang_context(YANG_MODULES),
         }
     }
 }
 
 impl SouthboundAdapterInterface for NetconfAdapter {
     fn configure_network(&self, topology: &Topology, schedule: &Schedule) -> FailedInterfaces {
-        let mut configured_nodes: HashMap<u32, NetconfClient> = HashMap::new();
+        let mut configured_nodes: HashMap<u32, NetconfConnection> = HashMap::new();
         let mut node_configurations: HashMap<u32, Vec<Config>> = HashMap::new();
 
         let mut failed_interfaces = FailedInterfaces {
@@ -76,8 +69,8 @@ impl SouthboundAdapterInterface for NetconfAdapter {
 
         'configloop: for configuration in schedule.configs.iter() {
             // check if connection is already established
-            if let Some(client) = configured_nodes.get_mut(&configuration.node_id) {
-                let config_result = self.configure_node(client, &configuration.port);
+            if let Some(netconf_connection) = configured_nodes.get_mut(&configuration.node_id) {
+                let config_result = self.configure_node(netconf_connection, &configuration.port);
                 if config_result.is_ok() {
                     node_configurations
                         .get_mut(&configuration.node_id)
@@ -95,11 +88,11 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                         Err(e) => {
                             eprintln!("[Southbound] error while connecting via netconf {e:?}");
                         }
-                        Ok(mut client) => {
+                        Ok(mut netconf_connection) => {
                             let config_result =
-                                self.configure_node(&mut client, &configuration.port);
+                                self.configure_node(&mut netconf_connection, &configuration.port);
                             if config_result.is_ok() {
-                                configured_nodes.insert(configuration.node_id, client);
+                                configured_nodes.insert(configuration.node_id, netconf_connection);
                                 node_configurations
                                     .insert(configuration.node_id, vec![configuration.clone()]);
                                 continue 'configloop;
@@ -125,8 +118,8 @@ impl SouthboundAdapterInterface for NetconfAdapter {
         }
 
         if failed_interfaces.interfaces.len() == 0 {
-            for (node_id, client) in configured_nodes.iter_mut() {
-                let commit_result = client.commit();
+            for (node_id, netconf_connection) in configured_nodes.iter_mut() {
+                let commit_result = netconf_connection.netconf_client.commit();
 
                 match commit_result {
                     Ok(_) => {}
@@ -150,7 +143,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                     }
                 }
 
-                if let Err(e) = client.close_session() {
+                if let Err(e) = netconf_connection.netconf_client.close_session() {
                     eprintln!("[Southbound] Error while closing connection... {:?}", e);
                 }
             }
@@ -162,16 +155,15 @@ impl SouthboundAdapterInterface for NetconfAdapter {
     }
 
     fn retrieve_station_capibilities(&self, config_params: SSHConfigurationParams) -> Vec<Port> {
-        if let Ok(mut client) = get_netconf_connection(&config_params) {
-            if let Ok(dtree) = get_interface_data(&mut client, &self.yang_ctx) {
-                if let Err(e) = client.close_session() {
+        if let Ok(mut netconf_connection) = get_netconf_connection(&config_params) {
+            if let Ok(dtree) = get_interface_data(&mut netconf_connection) {
+                if let Err(e) = netconf_connection.netconf_client.close_session() {
                     eprintln!("[Southbound] Error while closing netconf session: {:?}", e);
                 }
 
                 return get_port_delays(&dtree);
-            } else {
-                eprintln!("[Southbound] couldnt parse datatree...");
             }
+            eprintln!("[Southbound] couldnt parse datatree...");
         } else {
             eprintln!("[Southbound] couldnt connect to bridge...");
         }
@@ -179,16 +171,15 @@ impl SouthboundAdapterInterface for NetconfAdapter {
     }
 
     fn retrieve_lldp(&self, config_params: SSHConfigurationParams) -> Vec<RemoteSystemsData> {
-        if let Ok(mut client) = get_netconf_connection(&config_params) {
-            if let Ok(tree) = get_lldp_data(&mut client, &self.yang_ctx) {
-                if let Err(e) = client.close_session() {
+        if let Ok(mut netconf_connection) = get_netconf_connection(&config_params) {
+            if let Ok(tree) = get_lldp_data(&mut netconf_connection) {
+                if let Err(e) = netconf_connection.netconf_client.close_session() {
                     eprintln!("[Southbound] Error while closing netconf session: {:?}", e);
                 }
 
                 return get_remote_systems_data(&tree);
-            } else {
-                eprintln!("[Southbound] couldnt parse datatree...");
             }
+            eprintln!("[Southbound] couldnt parse datatree...");
         } else {
             eprintln!("[Southbound] couldnt connect to bridge...");
         }
@@ -201,13 +192,13 @@ impl SouthboundAdapterInterface for NetconfAdapter {
 
     fn configure_node(
         &self,
-        client: &mut NetconfClient,
+        netconf_connection: &mut NetconfConnection,
         port_configuration: &PortConfiguration,
     ) -> Result<(), NetconfClientError> {
-        match get_config_interfaces(client, &self.yang_ctx) {
+        match get_config_interfaces(netconf_connection) {
             Ok(mut netconf_configuration) => {
                 put_config_in_dtree(&mut netconf_configuration, port_configuration);
-                return edit_config_in_candidate(client, &netconf_configuration);
+                return edit_config_in_candidate(netconf_connection, &netconf_configuration);
             }
             Err(e) => return Err(e),
         }

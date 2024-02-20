@@ -1,9 +1,10 @@
-use super::types::YangModule;
+use super::types::{NetconfConnection, YangModule};
 use crate::cnc::types::lldp_types::{ManagementAddress, RemoteSystemsData};
 use crate::cnc::types::scheduling::PortConfiguration;
 use crate::cnc::types::topology::{Port, SSHConfigurationParams};
 use crate::cnc::types::tsn_types::BridgePortDelays;
 use netconf_client::errors::NetconfClientError;
+use netconf_client::models::replies::HelloServer;
 use netconf_client::models::requests::{Filter, FilterType};
 use netconf_client::netconf_client::NetconfClient;
 use std::sync::Arc;
@@ -32,9 +33,33 @@ pub const YANG_MODULES: &'static [YangModule] = &[
     YangModule::new("ieee802-dot1ab-lldp", "2018-11-13"),
 ];
 
+/// Initialize context for working with the correct yang models. This is unique for each Switch
+/// since the Modules  might differ.
+pub fn init_yang_ctx(hello_server: &HelloServer) -> Arc<Context> {
+    let _capabilities = &hello_server.capabilities;
+
+    // TODO: load yangmodules based on the provided capabilities.
+    // Since the used B&R switch doesnt provide all needed Models, these are hardcoded here.
+    let yang_modules: Vec<YangModule> = YANG_MODULES.to_vec();
+    // ----------
+
+    let mut ctx =
+        Context::new(ContextFlags::NO_YANGLIBRARY).expect("Failed to create yang-context");
+    ctx.set_searchdir(SEARCH_DIR)
+        .expect("Failed to set YANG search directory");
+
+    // Load YANG modules.
+    for module in yang_modules {
+        ctx.load_module(module.name, module.revision, module.features)
+            .expect("Failed to load module");
+    }
+
+    return Arc::new(ctx);
+}
+
 pub fn get_netconf_connection(
     config_params: &SSHConfigurationParams,
-) -> Result<NetconfClient, NetconfClientError> {
+) -> Result<NetconfConnection, NetconfClientError> {
     let mut client = NetconfClient::new(
         config_params.ip.as_str(),
         config_params.port,
@@ -42,17 +67,21 @@ pub fn get_netconf_connection(
         config_params.password.as_str(),
     );
 
-    client.connect()?;
+    let hello_server = client.connect()?;
     client.send_hello()?;
 
-    return Ok(client);
+    let con = NetconfConnection {
+        netconf_client: client,
+        yang_ctx: init_yang_ctx(&hello_server),
+    };
+
+    return Ok(con);
 }
 
 /// this runs a <get-config> rpc on the netconf-client. This will provied all configurable
 /// fields to edit and commit in the end.
 pub fn get_config_interfaces(
-    client: &mut NetconfClient,
-    ctx: &Arc<Context>,
+    netconf_connection: &mut NetconfConnection,
 ) -> Result<DataTree, NetconfClientError> {
     let get_config_interfaces_filter = Filter {
         filter_type: FilterType::Subtree,
@@ -65,7 +94,7 @@ pub fn get_config_interfaces(
             .to_string(),
     };
 
-    let response = client.get_config(
+    let response = netconf_connection.netconf_client.get_config(
         netconf_client::models::requests::DatastoreType::Candidate,
         Some(get_config_interfaces_filter),
     )?;
@@ -73,7 +102,7 @@ pub fn get_config_interfaces(
     let data = response.data.expect("no data in dtree");
 
     let dtree = DataTree::parse_string(
-        ctx,
+        &netconf_connection.yang_ctx,
         data.as_str(),
         DataFormat::XML,
         DataParserFlags::NO_VALIDATION,
@@ -226,7 +255,7 @@ pub fn print_whole_datatree(dtree: &DataTree) {
 }
 
 pub fn edit_config_in_candidate(
-    client: &mut NetconfClient,
+    netconf_connection: &mut NetconfConnection,
     dtree: &DataTree,
 ) -> Result<(), NetconfClientError> {
     let data = dtree
@@ -237,7 +266,7 @@ pub fn edit_config_in_candidate(
         .expect("couldnt parse datatree")
         .expect("no data");
 
-    let _res = client.edit_config(
+    let _res = netconf_connection.netconf_client.edit_config(
         netconf_client::models::requests::DatastoreType::Candidate,
         data,
         Some(netconf_client::models::requests::DefaultOperationType::Merge),
@@ -249,8 +278,7 @@ pub fn edit_config_in_candidate(
 }
 
 pub fn get_lldp_data(
-    client: &mut NetconfClient,
-    ctx: &Arc<Context>,
+    netconf_connection: &mut NetconfConnection,
 ) -> Result<DataTree, NetconfClientError> {
     let get_lldp_filter = Filter {
         filter_type: FilterType::Subtree,
@@ -264,10 +292,12 @@ pub fn get_lldp_data(
             .to_string(),
     };
 
-    let response = client.get(Some(get_lldp_filter))?;
+    let response = netconf_connection
+        .netconf_client
+        .get(Some(get_lldp_filter))?;
     let data = response.data.expect("no data in dtree");
     let dtree = DataTree::parse_string(
-        ctx,
+        &netconf_connection.yang_ctx,
         data.as_str(),
         DataFormat::XML,
         DataParserFlags::NO_VALIDATION,
@@ -279,8 +309,7 @@ pub fn get_lldp_data(
 }
 
 pub fn get_interface_data(
-    client: &mut NetconfClient,
-    ctx: &Arc<Context>,
+    netconf_connection: &mut NetconfConnection,
 ) -> Result<DataTree, NetconfClientError> {
     let get_interfaces_filter = Filter {
         filter_type: FilterType::Subtree,
@@ -293,12 +322,14 @@ pub fn get_interface_data(
             .to_string(),
     };
 
-    let response = client.get(Some(get_interfaces_filter))?;
+    let response = netconf_connection
+        .netconf_client
+        .get(Some(get_interfaces_filter))?;
 
     let data = response.data.expect("no data in dtree");
 
     let dtree = DataTree::parse_string(
-        ctx,
+        &netconf_connection.yang_ctx,
         data.as_str(),
         DataFormat::XML,
         DataParserFlags::NO_VALIDATION,
@@ -307,22 +338,6 @@ pub fn get_interface_data(
     .expect("couldnt parse data");
 
     return Ok(dtree);
-}
-
-/// Initialize context for working with the yang models. This only gets called on startup.
-pub fn create_yang_context(yang_modules: &[YangModule]) -> Arc<Context> {
-    let mut ctx =
-        Context::new(ContextFlags::NO_YANGLIBRARY).expect("Failed to create yang-context");
-    ctx.set_searchdir(SEARCH_DIR)
-        .expect("Failed to set YANG search directory");
-
-    // Load YANG modules.
-    for module in YANG_MODULES {
-        ctx.load_module(module.name, module.revision, module.features)
-            .expect("Failed to load module");
-    }
-
-    return Arc::new(ctx);
 }
 
 fn interface_name_from_xpath(xpath: &str) -> String {

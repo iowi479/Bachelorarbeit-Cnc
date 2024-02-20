@@ -1,4 +1,8 @@
+use netconf_client::netconf_client::NetconfClient;
+use std::sync::Arc;
+
 /// this is used to specify the yang-models that have to be loaded later.
+#[derive(Debug, Clone, Copy)]
 pub struct YangModule {
     pub name: &'static str,
     pub revision: Option<&'static str>,
@@ -28,5 +32,16 @@ impl YangModule {
             revision: Some(revision),
             features,
         }
+    }
+}
+
+pub struct NetconfConnection {
+    pub netconf_client: NetconfClient,
+    pub yang_ctx: Arc<yang2::context::Context>,
+}
+
+impl Drop for NetconfConnection {
+    fn drop(&mut self) {
+        let _ = self.netconf_client.close_session();
     }
 }

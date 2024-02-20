@@ -9,7 +9,7 @@ use super::types::tsn_types::{
 use super::types::uni_types::Domain;
 use super::types::ComputationResult;
 use super::Cnc;
-use std::{sync::Weak, thread, time::Duration};
+use std::sync::Weak;
 
 pub trait SchedulerAdapterInterface {
     fn compute_schedule(&self, topology: &Topology, domains: &Vec<Domain>) -> ComputationResult;
