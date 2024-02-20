@@ -7,6 +7,7 @@ use netconf_client::errors::NetconfClientError;
 use netconf_client::models::replies::HelloServer;
 use netconf_client::models::requests::{Filter, FilterType};
 use netconf_client::netconf_client::NetconfClient;
+use std::collections::HashMap;
 use std::sync::Arc;
 use yang2::context::{Context, ContextFlags};
 use yang2::data::{
@@ -35,14 +36,7 @@ pub const YANG_MODULES: &'static [YangModule] = &[
 
 /// Initialize context for working with the correct yang models. This is unique for each Switch
 /// since the Modules  might differ.
-pub fn init_yang_ctx(hello_server: &HelloServer) -> Arc<Context> {
-    let _capabilities = &hello_server.capabilities;
-
-    // TODO: load yangmodules based on the provided capabilities.
-    // Since the used B&R switch doesnt provide all needed Models, these are hardcoded here.
-    let yang_modules: Vec<YangModule> = YANG_MODULES.to_vec();
-    // ----------
-
+pub fn init_yang_ctx(yang_modules: &Vec<YangModule>) -> Arc<Context> {
     let mut ctx =
         Context::new(ContextFlags::NO_YANGLIBRARY).expect("Failed to create yang-context");
     ctx.set_searchdir(SEARCH_DIR)
@@ -55,6 +49,34 @@ pub fn init_yang_ctx(hello_server: &HelloServer) -> Arc<Context> {
     }
 
     return Arc::new(ctx);
+}
+
+/// this extracts the yang_modules form the <hello>-Message
+pub fn get_yang_modules(hello_server: &HelloServer) -> Vec<YangModule> {
+    let _capabilities = &hello_server.capabilities;
+
+    // TODO: load yangmodules based on the provided capabilities.
+    // Since the used B&R switch doesnt provide all needed Models, these are hardcoded here.
+    let yang_modules: Vec<YangModule> = YANG_MODULES.to_vec();
+    // ----------
+
+    return yang_modules;
+}
+
+pub fn init_xpath_dict(_yang_modules: &Vec<YangModule>) -> HashMap<String, String> {
+    let mut dict: HashMap<String, String> = HashMap::new();
+
+    // TODO: is this really a good idea?
+    // This will bloat the extraction of data quite a lot and doesn't really give a benefit right
+    // now...
+    dict.insert(
+        String::from("interface-byname"),
+        String::from(
+            "/ietf-interfaces:interfaces/interface[name='{}']/ieee802-dot1q-sched:gate-parameters",
+        ),
+    );
+
+    return dict;
 }
 
 pub fn get_netconf_connection(
@@ -70,9 +92,12 @@ pub fn get_netconf_connection(
     let hello_server = client.connect()?;
     client.send_hello()?;
 
+    let yang_modules: Vec<YangModule> = get_yang_modules(&hello_server);
+
     let con = NetconfConnection {
         netconf_client: client,
-        yang_ctx: init_yang_ctx(&hello_server),
+        yang_ctx: init_yang_ctx(&yang_modules),
+        xpath_dict: init_xpath_dict(&yang_modules),
     };
 
     return Ok(con);
