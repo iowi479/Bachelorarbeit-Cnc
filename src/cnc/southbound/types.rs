@@ -39,9 +39,3 @@ pub struct NetconfConnection {
     pub netconf_client: NetconfClient,
     pub yang_ctx: Arc<yang2::context::Context>,
 }
-
-impl Drop for NetconfConnection {
-    fn drop(&mut self) {
-        let _ = self.netconf_client.close_session();
-    }
-}

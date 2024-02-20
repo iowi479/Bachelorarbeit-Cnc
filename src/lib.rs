@@ -122,7 +122,6 @@ mod tests {
 
     #[test]
     #[serial]
-    /// TODO implement this test
     fn compute_all() {
         // Configuration for CNC
         let id: u32 = 0;
@@ -195,7 +194,7 @@ mod tests {
 
     #[test]
     #[serial]
-    fn test_get_all() {
+    fn get_all_streams() {
         // create precondition
         insert_streams();
 
@@ -218,8 +217,7 @@ mod tests {
     }
 
     #[test]
-    #[serial]
-    fn test_lldp_neighbours() {
+    fn lldp_neighbours() {
         let config = SSHConfigurationParams {
             username: String::from("admin"),
             password: String::from("admin"),
@@ -236,6 +234,25 @@ mod tests {
         println!("Check manually if the neighbours are correct");
         for neighbour in neighbours.iter() {
             println!("{:?}", neighbour);
+        }
+    }
+
+    #[test]
+    fn port_capabilities() {
+        let config = SSHConfigurationParams {
+            username: String::from("admin"),
+            password: String::from("admin"),
+            ip: String::from("10.2.0.1"),
+            port: 830,
+        };
+
+        let sb = NetconfAdapter::new();
+        let delays = sb.retrieve_station_capibilities(config);
+        assert!(delays.len() > 0);
+
+        println!("Check manuall if the data is correct");
+        for delay in delays.iter() {
+            println!("{:?}", delay);
         }
     }
 }
