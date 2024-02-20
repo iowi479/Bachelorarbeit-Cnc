@@ -4,8 +4,10 @@ libraries like libyang2, libnetconf2 and openssl need to be installed. Should be
 
 
 ## run tests
+single threaded is important for no contests on netconf connections and filereads.
+Otherwise tests might fail.
 ```console
-cargo test -- --show-output --nocapture
+cargo test -- --test-threads=1 --show-output --nocapture
 ```
 
 ## run
