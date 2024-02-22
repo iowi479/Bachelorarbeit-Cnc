@@ -19,6 +19,7 @@ use yang2::schema::DataValue;
 const SEARCH_DIR: &str = "./assets/yang/";
 
 /// all yang-models to load have to be included here.
+/// TODO: move this to another file to bundle up all b&r specific stuff
 pub const YANG_MODULES: &'static [YangModule] = &[
     YangModule::new_with_features("ietf-interfaces", "2018-02-20", &["if-mib"]),
     YangModule::new("ietf-yang-types", "2013-07-15"),
@@ -40,29 +41,30 @@ pub fn init_yang_ctx(yang_modules: &Vec<YangModule>) -> Arc<Context> {
     let mut ctx =
         Context::new(ContextFlags::NO_YANGLIBRARY).expect("Failed to create yang-context");
     ctx.set_searchdir(SEARCH_DIR)
-        .expect("Failed to set YANG search directory");
+        .expect("failed to set search directory to find yang-models");
 
     // Load YANG modules.
     for module in yang_modules {
         ctx.load_module(module.name, module.revision, module.features)
-            .expect("Failed to load module");
+            .expect("failed to load yang-module");
     }
 
-    return Arc::new(ctx);
+    Arc::new(ctx)
 }
 
 /// this extracts the yang_modules form the <hello>-Message
-pub fn get_yang_modules(hello_server: &HelloServer) -> Vec<YangModule> {
-    let _capabilities = &hello_server.capabilities;
-
+/// TODO: this is not implemented yet. The used B&R switch doesn't provide all needed models.
+pub fn extract_used_yang_modules(hello_server: &HelloServer) -> Vec<YangModule> {
     // TODO: load yangmodules based on the provided capabilities.
     // Since the used B&R switch doesnt provide all needed Models, these are hardcoded here.
+    let _capabilities = &hello_server.capabilities;
     let yang_modules: Vec<YangModule> = YANG_MODULES.to_vec();
     // ----------
 
-    return yang_modules;
+    yang_modules
 }
 
+/// TODO:
 pub fn init_xpath_dict(_yang_modules: &Vec<YangModule>) -> HashMap<String, String> {
     let mut dict: HashMap<String, String> = HashMap::new();
 
@@ -76,31 +78,32 @@ pub fn init_xpath_dict(_yang_modules: &Vec<YangModule>) -> HashMap<String, Strin
         ),
     );
 
-    return dict;
+    dict
 }
 
-pub fn get_netconf_connection(
+/// this function establishes a connection to the netconf-server. It will load all needed yang-models
+pub fn establish_netconf_connection(
     config_params: &SSHConfigurationParams,
 ) -> Result<NetconfConnection, NetconfClientError> {
-    let mut client = NetconfClient::new(
+    let mut netconf_client = NetconfClient::new(
         config_params.ip.as_str(),
         config_params.port,
         config_params.username.as_str(),
         config_params.password.as_str(),
     );
 
-    let hello_server = client.connect()?;
-    client.send_hello()?;
+    let hello_server = netconf_client.connect()?;
+    let yang_modules: Vec<YangModule> = extract_used_yang_modules(&hello_server);
 
-    let yang_modules: Vec<YangModule> = get_yang_modules(&hello_server);
+    netconf_client.send_hello()?;
 
-    let con = NetconfConnection {
-        netconf_client: client,
+    let netconf_connection = NetconfConnection {
+        netconf_client,
         yang_ctx: init_yang_ctx(&yang_modules),
         xpath_dict: init_xpath_dict(&yang_modules),
     };
 
-    return Ok(con);
+    Ok(netconf_connection)
 }
 
 /// this runs a <get-config> rpc on the netconf-client. This will provied all configurable
@@ -119,28 +122,30 @@ pub fn get_config_interfaces(
             .to_string(),
     };
 
-    let response = netconf_connection.netconf_client.get_config(
+    let get_config_response = netconf_connection.netconf_client.get_config(
         netconf_client::models::requests::DatastoreType::Candidate,
         Some(get_config_interfaces_filter),
     )?;
 
-    let data = response.data.expect("no data in dtree");
+    let response_data = get_config_response.data.expect(
+        "Requested <gate-parameters> of interfaces but didn't receive any data to be parsed",
+    );
 
     let dtree = DataTree::parse_string(
         &netconf_connection.yang_ctx,
-        data.as_str(),
+        response_data.as_str(),
         DataFormat::XML,
         DataParserFlags::NO_VALIDATION,
         DataValidationFlags::empty(),
     )
-    .expect("couldnt parse data");
+    .expect("data for <gate-parameters> was received but it couldn't be parsed based on the provided yang-models");
 
-    return Ok(dtree);
+    Ok(dtree)
 }
 
 /// the provided configurations will be loaded into the given dtree. If the nodes dont already exist,
 /// they will be created. If they exist with different values, they will be overriden.
-pub fn put_config_in_dtree(dtree: &mut DataTree, port_configuration: &PortConfiguration) {
+pub fn put_configurations_in_dtree(dtree: &mut DataTree, port_configuration: &PortConfiguration) {
     let port_xpath = format!(
         "/ietf-interfaces:interfaces/interface[name='{}']/ieee802-dot1q-sched:gate-parameters",
         port_configuration.name
@@ -266,7 +271,7 @@ fn put_gate_parameters_in_dtree(dtree: &mut DataTree, port_xpath: String, path: 
         .expect(format!("[Southbound] couldnt configure node {} in dtree...", path).as_str());
 }
 
-/// this is for debugging. Can be unused...
+/// this is for debugging.
 /// prints dtree in XML format to stdout
 #[allow(unused)]
 pub fn print_whole_datatree(dtree: &DataTree) {
@@ -291,7 +296,7 @@ pub fn edit_config_in_candidate(
         .expect("couldnt parse datatree")
         .expect("no data");
 
-    let _res = netconf_connection.netconf_client.edit_config(
+    let res = netconf_connection.netconf_client.edit_config(
         netconf_client::models::requests::DatastoreType::Candidate,
         data,
         Some(netconf_client::models::requests::DefaultOperationType::Merge),
@@ -299,10 +304,14 @@ pub fn edit_config_in_candidate(
         Some(netconf_client::models::requests::ErrorOptionType::RollbackOnError),
     )?;
 
+    // TODO: check if the response is ok
+    // or if something can be extracted
+    dbg!(res);
+
     Ok(())
 }
 
-pub fn get_lldp_data(
+pub fn get_lldp_remote_systems_data(
     netconf_connection: &mut NetconfConnection,
 ) -> Result<DataTree, NetconfClientError> {
     let get_lldp_filter = Filter {
@@ -328,9 +337,9 @@ pub fn get_lldp_data(
         DataParserFlags::NO_VALIDATION,
         DataValidationFlags::empty(),
     )
-    .expect("couldnt parse data");
+    .expect("got lldp data but couldn't parse data");
 
-    return Ok(dtree);
+    Ok(dtree)
 }
 
 pub fn get_interface_data(
@@ -362,28 +371,38 @@ pub fn get_interface_data(
     )
     .expect("couldnt parse data");
 
-    return Ok(dtree);
+    Ok(dtree)
 }
 
-fn interface_name_from_xpath(xpath: &str) -> String {
-    let parts = xpath
-        .split("[name='")
+/// helper function to extract the interface name from an xpath
+///
+/// # Example
+///
+/// "/ietf-interfaces:interfaces/interface[name='eth0']/ieee802-dot1q-sched:gate-parameters" -> "eth0"
+fn extract_interface_name_from_xpath(xpath: &str) -> String {
+    let name_plus_rest = xpath
+        .split("interface[name='")
         .last()
-        .expect("failed on first name split");
+        .expect("provided xpath for interface name is not valid. Failed on first name split");
 
-    let part = parts
+    let only_name = name_plus_rest
         .split("']")
         .next()
-        .expect("failed on second name split");
+        .expect("provided xpath for interface name is not valid. Failed on second name split");
 
-    return part.to_string();
+    String::from(only_name)
 }
 
-fn last_node_name_from_xpath(xpath: &String) -> &str {
+/// helper function to extract the last node name from an xpath
+///
+/// # Example
+///
+/// "/ieee802-dot1ab-lldp:lldp/port/remote-systems-data" -> "remote-systems-data"
+fn extract_last_node_name_from_xpath(xpath: &String) -> &str {
     xpath.split("/").last().unwrap().trim()
 }
 
-pub fn get_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {
+pub fn extract_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {
     let mut remote_systems: Vec<RemoteSystemsData> = Vec::new();
 
     for dnode in dtree
@@ -394,7 +413,7 @@ pub fn get_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {
 
         for child_node in dnode.children() {
             let path = child_node.path();
-            let node_name = last_node_name_from_xpath(&path);
+            let node_name = extract_last_node_name_from_xpath(&path);
 
             let value = child_node.value();
 
@@ -469,15 +488,15 @@ pub fn get_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {
     return remote_systems;
 }
 
-pub fn get_port_delays(dtree: &DataTree) -> Vec<Port> {
+pub fn extract_port_delays(dtree: &DataTree) -> Vec<Port> {
     let mut ports: Vec<Port> = Vec::new();
 
-    for dnode in dtree
+    for interface_dnode in dtree
         .find_xpath("/ietf-interfaces:interfaces/interface")
         .expect("no iterfaces found")
     {
-        let path = dnode.path();
-        let name = interface_name_from_xpath(path.as_str());
+        let path = interface_dnode.path();
+        let name = extract_interface_name_from_xpath(path.as_str());
 
         let mut port = Port {
             name,
@@ -486,11 +505,11 @@ pub fn get_port_delays(dtree: &DataTree) -> Vec<Port> {
             tick_granularity: 0,
         };
 
-        for address_node in dnode
+        for address_dnode in interface_dnode
             .find_xpath((path.clone() + "/bridge-port/address").as_str())
             .expect("no address field found")
         {
-            if let Some(value) = address_node.value() {
+            if let Some(value) = address_dnode.value() {
                 match value {
                     DataValue::Other(v) => port.mac_address = v,
                     _ => eprintln!("found an unexpected node in dtree"),
@@ -498,11 +517,11 @@ pub fn get_port_delays(dtree: &DataTree) -> Vec<Port> {
             }
         }
 
-        for tick_node in dnode
+        for tick_dnode in interface_dnode
             .find_xpath((path.clone() + "/gate-parameters/tick-granularity").as_str())
             .expect("no tick-granularity field found")
         {
-            if let Some(value) = tick_node.value() {
+            if let Some(value) = tick_dnode.value() {
                 match value {
                     DataValue::Uint32(tick) => port.tick_granularity = tick,
                     _ => eprintln!("found an unexpected node in dtree"),
@@ -510,15 +529,15 @@ pub fn get_port_delays(dtree: &DataTree) -> Vec<Port> {
             }
         }
 
-        for bpd_node in dnode
+        for bridge_port_delays_dnode in interface_dnode
             .find_xpath((path + "/bridge-port/bridge-port-delays").as_str())
             .expect("no bpd nodes found")
         {
             let mut delays = BridgePortDelays::new();
 
-            for child_node in bpd_node.children() {
+            for child_node in bridge_port_delays_dnode.children() {
                 let path = child_node.path();
-                let node_name = last_node_name_from_xpath(&path);
+                let node_name = extract_last_node_name_from_xpath(&path);
 
                 let value: u32 = match child_node
                     .value()
