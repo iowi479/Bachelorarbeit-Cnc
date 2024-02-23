@@ -115,7 +115,7 @@ pub fn put_configurations_in_dtree(
 ) {
     // path-example: /ietf-interfaces:interfaces/interface[name='eth0']/ieee802-dot1q-sched:gate-parameters
     let mut port_xpath: String = String::from("/");
-    port_xpath.push_str(&yang_paths.params.interfaces);
+    port_xpath.push_str(&yang_paths.params.interfaces_by_name);
     port_xpath = port_xpath.replace("{}", &port_configuration.name);
     port_xpath.push_str("/");
     port_xpath.push_str(&yang_paths.params.gate_parameters);
@@ -371,7 +371,7 @@ fn extract_interface_name_from_xpath(xpath: &str) -> String {
 ///
 /// "/ieee802-dot1ab-lldp:lldp/port/remote-systems-data" -> "remote-systems-data"
 fn extract_last_node_name_from_xpath(xpath: &String) -> &str {
-    let mut parts = xpath.split("/").expect("no / found in xpath");
+    let parts = xpath.split("/");
     let last_node = parts.last().expect("no last node found in xpath");
     last_node
 }
@@ -381,9 +381,10 @@ pub fn extract_remote_systems_data(
     yang_paths: &YangPaths,
 ) -> Vec<RemoteSystemsData> {
     let mut remote_systems: Vec<RemoteSystemsData> = Vec::new();
+    let remote_systems_path: String = String::from("/") + (&yang_paths.params.remote_systems_data);
 
     for dnode in dtree
-        .find_xpath(&yang_paths.params.remote_systems_data)
+        .find_xpath(&remote_systems_path)
         .expect("no remote-systems-data found")
     {
         let mut system = RemoteSystemsData::new();
@@ -511,14 +512,15 @@ pub fn extract_remote_systems_data(
 
         if let Ok(management_nodes) = dnode.find_xpath(&yang_paths.params.management_address) {
             for child_node in management_nodes {
-                let child_node_name = extract_last_node_name_from_xpath(&child_node.path());
+                let child_node_path = child_node.path();
+                let child_node_name = extract_last_node_name_from_xpath(&child_node_path);
                 let params = child_node_name.replace(&yang_paths.params.management_address, "");
                 let attribs = params
                     .split("][")
                     .map(|x| {
                         let x = x.replace("[", "");
                         let x = x.replace("]", "");
-                        return x.replace("'", "");
+                        x.replace("'", "")
                     })
                     .collect::<Vec<String>>();
 
@@ -548,14 +550,15 @@ pub fn extract_remote_systems_data(
         remote_systems.push(system);
     }
 
-    return remote_systems;
+    remote_systems
 }
 
 pub fn extract_port_delays(dtree: &DataTree, yang_paths: &YangPaths) -> Vec<Port> {
     let mut ports: Vec<Port> = Vec::new();
+    let interfaces_path: String = String::from("/") + &yang_paths.params.interfaces;
 
     for interface_dnode in dtree
-        .find_xpath(&yang_paths.params.interfaces)
+        .find_xpath(&interfaces_path)
         .expect("no iterfaces found")
     {
         let path = interface_dnode.path();
@@ -571,7 +574,7 @@ pub fn extract_port_delays(dtree: &DataTree, yang_paths: &YangPaths) -> Vec<Port
         if let Ok(child_node) = interface_dnode.find_path(&yang_paths.params.bridge_port_address) {
             if let Some(value) = child_node.value() {
                 match value {
-                    DataValue::Other(v) => port.bridge_port_address = v,
+                    DataValue::Other(v) => port.mac_address = v,
                     _ => eprintln!("found an unexpected node in dtree"),
                 }
             }
@@ -597,6 +600,19 @@ pub fn extract_port_delays(dtree: &DataTree, yang_paths: &YangPaths) -> Vec<Port
             .expect("no bpd nodes found")
         {
             let mut delays = BridgePortDelays::new();
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.port_speed)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint32(v) => delays.port_speed = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no port-speed found in dtree");
+            }
 
             for child_node in bridge_port_delays_dnode.children() {
                 let path = child_node.path();
@@ -637,5 +653,5 @@ pub fn extract_port_delays(dtree: &DataTree, yang_paths: &YangPaths) -> Vec<Port
         ports.push(port);
     }
 
-    return ports;
+    ports
 }

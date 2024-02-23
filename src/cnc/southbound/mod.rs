@@ -1,3 +1,4 @@
+use self::netconf::{establish_netconf_connection, put_configurations_in_dtree};
 use self::types::NetconfConnection;
 use super::types::lldp_types::RemoteSystemsData;
 use super::types::scheduling::{PortConfiguration, Schedule};
@@ -6,8 +7,8 @@ use super::types::tsn_types::GroupInterfaceId;
 use super::types::{FailedInterface, FailedInterfaces};
 use super::Cnc;
 use crate::cnc::southbound::netconf::{
-    edit_config_in_candidate, get_config_interfaces, get_interface_data, get_lldp_data,
-    get_netconf_connection, get_port_delays, get_remote_systems_data, put_config_in_dtree,
+    edit_config_in_candidate, extract_port_delays, extract_remote_systems_data,
+    get_config_interfaces, get_interface_data, get_lldp_remote_systems_data,
 };
 use crate::cnc::types::scheduling::Config;
 use netconf_client::errors::NetconfClientError;
@@ -84,7 +85,7 @@ impl SouthboundAdapterInterface for NetconfAdapter {
                 if let Some(node) = node {
                     let config_params = node.configuration_params.unwrap();
 
-                    match get_netconf_connection(&config_params) {
+                    match establish_netconf_connection(&config_params) {
                         Err(e) => {
                             eprintln!("[Southbound] error while connecting via netconf {e:?}");
                         }
@@ -151,39 +152,40 @@ impl SouthboundAdapterInterface for NetconfAdapter {
             eprintln!("[Southbound] not comitting since there where configuration failures...");
         }
 
-        return failed_interfaces;
+        failed_interfaces
     }
 
     fn retrieve_station_capibilities(&self, config_params: SSHConfigurationParams) -> Vec<Port> {
-        if let Ok(mut netconf_connection) = get_netconf_connection(&config_params) {
+        if let Ok(mut netconf_connection) = establish_netconf_connection(&config_params) {
             if let Ok(dtree) = get_interface_data(&mut netconf_connection) {
                 if let Err(e) = netconf_connection.netconf_client.close_session() {
                     eprintln!("[Southbound] Error while closing netconf session: {:?}", e);
                 }
 
-                return get_port_delays(&dtree);
+                return extract_port_delays(&dtree, &netconf_connection.yang_paths);
             }
             eprintln!("[Southbound] couldnt parse datatree...");
         } else {
             eprintln!("[Southbound] couldnt connect to bridge...");
         }
-        return Vec::new();
+        Vec::new()
     }
 
     fn retrieve_lldp(&self, config_params: SSHConfigurationParams) -> Vec<RemoteSystemsData> {
-        if let Ok(mut netconf_connection) = get_netconf_connection(&config_params) {
-            if let Ok(tree) = get_lldp_data(&mut netconf_connection) {
+        if let Ok(mut netconf_connection) = establish_netconf_connection(&config_params) {
+            if let Ok(tree) = get_lldp_remote_systems_data(&mut netconf_connection) {
                 if let Err(e) = netconf_connection.netconf_client.close_session() {
                     eprintln!("[Southbound] Error while closing netconf session: {:?}", e);
                 }
 
-                return get_remote_systems_data(&tree);
+                return extract_remote_systems_data(&tree, &netconf_connection.yang_paths);
             }
             eprintln!("[Southbound] couldnt parse datatree...");
         } else {
             eprintln!("[Southbound] couldnt connect to bridge...");
         }
-        return Vec::new();
+
+        Vec::new()
     }
 
     fn set_cnc_ref(&mut self, cnc: Weak<Cnc>) {
@@ -197,10 +199,14 @@ impl SouthboundAdapterInterface for NetconfAdapter {
     ) -> Result<(), NetconfClientError> {
         match get_config_interfaces(netconf_connection) {
             Ok(mut netconf_configuration) => {
-                put_config_in_dtree(&mut netconf_configuration, port_configuration);
-                return edit_config_in_candidate(netconf_connection, &netconf_configuration);
+                put_configurations_in_dtree(
+                    &mut netconf_configuration,
+                    &netconf_connection.yang_paths,
+                    port_configuration,
+                );
+                edit_config_in_candidate(netconf_connection, &netconf_configuration)
             }
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
         }
     }
 }

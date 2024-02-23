@@ -1,6 +1,5 @@
 use netconf_client::netconf_client::NetconfClient;
-use serde_json::to_string;
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 /// this is used to specify the yang-models that have to be loaded later.
 #[derive(Debug, Clone, Copy)]
@@ -133,7 +132,7 @@ impl SwitchParameters {
     fn load_br_paths() -> Self {
         Self {
             // ietf-interfaces
-            interfaces: "ietf-interfaces:interfaces".to_string(),
+            interfaces: "ietf-interfaces:interfaces/interface".to_string(),
             interfaces_by_name: "ietf-interfaces:interfaces/interface[name='{}']".to_string(),
 
             // ieee802-dot1q-sched
@@ -152,7 +151,7 @@ impl SwitchParameters {
             admin_base_time_fractional_seconds: "admin-base-time/fractional-seconds".to_string(),
             admin_cycle_time_extension: "admin-cycle-time-extension".to_string(),
             config_change: "config-change".to_string(),
-            tick_granularity: "tick-granularity").to_string(),
+            tick_granularity: "tick-granularity".to_string(),
 
             // ieee802-dot1ab-lldp
             remote_systems_data: "ieee802-dot1ab-lldp:lldp/port/remote-systems-data".to_string(),
