@@ -593,8 +593,6 @@ pub fn extract_port_delays(dtree: &DataTree, yang_paths: &YangPaths) -> Vec<Port
             eprintln!("no tick-granularity found in dtree");
         };
 
-        // TODO: muessen die xpaths immer absolut oder mit * sein? wenn ja muss alles nochmal
-        // angepasst werden, da die ganzen xpaths relativ sind
         for bridge_port_delays_dnode in interface_dnode
             .find_xpath((path + "/bridge-port/bridge-port-delays").as_str())
             .expect("no bpd nodes found")
@@ -614,37 +612,108 @@ pub fn extract_port_delays(dtree: &DataTree, yang_paths: &YangPaths) -> Vec<Port
                 eprintln!("no port-speed found in dtree");
             }
 
-            for child_node in bridge_port_delays_dnode.children() {
-                let path = child_node.path();
-                let node_name = extract_last_node_name_from_xpath(&path);
-
-                let value: u32 = match child_node
-                    .value()
-                    .expect("no value in tree is not possible")
-                {
-                    DataValue::Uint64(v) => {
-                        println!("{} is u64", node_name);
-                        v as u32
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.dependent_rx_delay_min)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.dependent_rx_delay_min = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
                     }
-                    DataValue::Uint32(v) => {
-                        println!("{} is u32", node_name);
-                        v as u32
-                    }
-                    _ => 0,
-                };
-
-                match node_name {
-                    "port-speed" => delays.port_speed = value,
-                    "dependentRxDelayMin" => delays.dependent_rx_delay_min = value,
-                    "dependentRxDelayMax" => delays.dependent_rx_delay_max = value,
-                    "independentRxDelayMin" => delays.independent_rx_delay_min = value,
-                    "independentRxDelayMax" => delays.independent_rx_delay_max = value,
-                    "independentRlyDelayMin" => delays.independent_rly_delay_min = value,
-                    "independentRlyDelayMax" => delays.independent_rly_delay_max = value,
-                    "independentTxDelayMin" => delays.independent_tx_delay_min = value,
-                    "independentTxDelayMax" => delays.independent_tx_delay_max = value,
-                    _ => eprintln!("unknown node found in dtree..."),
                 }
+            } else {
+                eprintln!("no dependent-rx-delay-min found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.dependent_rx_delay_max)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.dependent_rx_delay_max = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no dependent-rx-delay-max found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.independent_rx_delay_min)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.independent_rx_delay_min = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no independent-rx-delay-min found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.independent_rx_delay_max)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.independent_rx_delay_max = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no independent-rx-delay-max found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.independent_rly_delay_min)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.independent_rly_delay_min = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no independent-rly-delay-min found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.independent_rly_delay_max)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.independent_rly_delay_max = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no independent-rly-delay-max found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.independent_tx_delay_min)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.independent_tx_delay_min = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no independent-tx-delay-min found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.independent_tx_delay_max)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.independent_tx_delay_max = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no independent-tx-delay-max found in dtree");
             }
 
             port.delays.push(delays);
