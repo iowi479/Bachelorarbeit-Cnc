@@ -57,6 +57,11 @@ pub fn establish_netconf_connection(
         config_params.password.as_str(),
     );
 
+    println!(
+        "[Southbound] trying to establish netconf-connection to {}",
+        config_params.ip.to_string()
+    );
+
     let hello_server = netconf_client.connect()?;
     let yang_modules: Vec<YangModule> = extract_used_yang_modules(&hello_server);
 
@@ -153,19 +158,19 @@ pub fn put_configurations_in_dtree(
         put_gate_parameters_in_dtree(
             dtree,
             port_xpath.clone(),
-            &(path_prefix.clone() + &yang_paths.params.operation_name),
+            &(path_prefix.clone() + "/" + &yang_paths.params.operation_name),
             operation_name,
         );
         put_gate_parameters_in_dtree(
             dtree,
             port_xpath.clone(),
-            &(path_prefix.clone() + &yang_paths.params.sgs_params_gate_states_value),
+            &(path_prefix.clone() + "/" + &yang_paths.params.sgs_params_gate_states_value),
             &gce.gate_state_value.to_string(),
         );
         put_gate_parameters_in_dtree(
             dtree,
             port_xpath.clone(),
-            &(path_prefix.clone() + &yang_paths.params.sgs_params_time_interval_value),
+            &(path_prefix.clone() + "/" + &yang_paths.params.sgs_params_time_interval_value),
             &gce.time_interval_value.to_string(),
         );
     }
@@ -173,9 +178,9 @@ pub fn put_configurations_in_dtree(
     if config.admin_control_list.len() == 0 {
         // this should empty the list but not sure... test
         // TODO does this work?
-        if let Err(e) = dtree
-            .remove((port_xpath.clone() + &yang_paths.params.admin_control_list_length).as_str())
-        {
+        if let Err(e) = dtree.remove(
+            (port_xpath.clone() + "/" + &yang_paths.params.admin_control_list_length).as_str(),
+        ) {
             eprintln!("[Southbound] couldnt remove admin-control-list: {:?}", e);
         }
     }
@@ -271,17 +276,13 @@ pub fn edit_config_in_candidate(
         .expect("couldnt parse datatree")
         .expect("no data");
 
-    let res = netconf_connection.netconf_client.edit_config(
+    netconf_connection.netconf_client.edit_config(
         netconf_client::models::requests::DatastoreType::Candidate,
         data,
         Some(netconf_client::models::requests::DefaultOperationType::Merge),
         Some(netconf_client::models::requests::TestOptionType::TestThenSet),
         Some(netconf_client::models::requests::ErrorOptionType::RollbackOnError),
     )?;
-
-    // TODO: check if the response is ok
-    // or if something can be extracted
-    dbg!(res);
 
     Ok(())
 }
