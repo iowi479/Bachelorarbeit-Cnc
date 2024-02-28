@@ -1,4 +1,4 @@
-use super::types::{NetconfConnection, YangModule};
+use super::types::{NetconfConnection, YangModule, YangPaths, YANG_MODULES};
 use crate::cnc::types::lldp_types::{ManagementAddress, RemoteSystemsData};
 use crate::cnc::types::scheduling::PortConfiguration;
 use crate::cnc::types::topology::{Port, SSHConfigurationParams};
@@ -7,7 +7,6 @@ use netconf_client::errors::NetconfClientError;
 use netconf_client::models::replies::HelloServer;
 use netconf_client::models::requests::{Filter, FilterType};
 use netconf_client::netconf_client::NetconfClient;
-use std::collections::HashMap;
 use std::sync::Arc;
 use yang2::context::{Context, ContextFlags};
 use yang2::data::{
@@ -17,23 +16,6 @@ use yang2::schema::DataValue;
 
 /// folder for all needed yang-models
 const SEARCH_DIR: &str = "./assets/yang/";
-
-/// all yang-models to load have to be included here.
-/// TODO: move this to another file to bundle up all b&r specific stuff
-pub const YANG_MODULES: &'static [YangModule] = &[
-    YangModule::new_with_features("ietf-interfaces", "2018-02-20", &["if-mib"]),
-    YangModule::new("ietf-yang-types", "2013-07-15"),
-    YangModule::new("iana-if-type", "2017-01-19"),
-    YangModule::new("ieee802-types", "2020-10-23"),
-    YangModule::new("ieee802-dot1q-bridge", "2020-11-07"),
-    YangModule::new("ieee802-dot1q-types", "2020-10-24"),
-    YangModule::new("ieee802-dot1q-bridge-delays", "2021-11-23"),
-    YangModule::new("ieee802-dot1q-preemption", "2018-09-10"),
-    YangModule::new_with_features("ieee802-dot1q-sched", "2018-09-11", &["scheduled-traffic"]),
-    YangModule::new("ietf-routing", "2018-03-13"),
-    YangModule::new("ieee802-dot1ab-types", "2018-10-03"),
-    YangModule::new("ieee802-dot1ab-lldp", "2018-11-13"),
-];
 
 /// Initialize context for working with the correct yang models. This is unique for each Switch
 /// since the Modules  might differ.
@@ -64,23 +46,6 @@ pub fn extract_used_yang_modules(hello_server: &HelloServer) -> Vec<YangModule> 
     yang_modules
 }
 
-/// TODO:
-pub fn init_xpath_dict(_yang_modules: &Vec<YangModule>) -> HashMap<String, String> {
-    let mut dict: HashMap<String, String> = HashMap::new();
-
-    // TODO: is this really a good idea?
-    // This will bloat the extraction of data quite a lot and doesn't really give a benefit right
-    // now...
-    dict.insert(
-        String::from("interface-byname"),
-        String::from(
-            "/ietf-interfaces:interfaces/interface[name='{}']/ieee802-dot1q-sched:gate-parameters",
-        ),
-    );
-
-    dict
-}
-
 /// this function establishes a connection to the netconf-server. It will load all needed yang-models
 pub fn establish_netconf_connection(
     config_params: &SSHConfigurationParams,
@@ -92,6 +57,11 @@ pub fn establish_netconf_connection(
         config_params.password.as_str(),
     );
 
+    println!(
+        "[Southbound] trying to establish netconf-connection to {}",
+        config_params.ip.to_string()
+    );
+
     let hello_server = netconf_client.connect()?;
     let yang_modules: Vec<YangModule> = extract_used_yang_modules(&hello_server);
 
@@ -100,7 +70,7 @@ pub fn establish_netconf_connection(
     let netconf_connection = NetconfConnection {
         netconf_client,
         yang_ctx: init_yang_ctx(&yang_modules),
-        xpath_dict: init_xpath_dict(&yang_modules),
+        yang_paths: YangPaths::load_paths(&yang_modules),
     };
 
     Ok(netconf_connection)
@@ -113,13 +83,11 @@ pub fn get_config_interfaces(
 ) -> Result<DataTree, NetconfClientError> {
     let get_config_interfaces_filter = Filter {
         filter_type: FilterType::Subtree,
-        data: "<interfaces xmlns=\"urn:ietf:params:xml:ns:yang:ietf-interfaces\">
-                    <interface>
-                        <gate-parameters xmlns=\"urn:ieee:std:802.1Q:yang:ieee802-dot1q-sched\">
-                        </gate-parameters>
-                    </interface>
-                </interfaces>"
-            .to_string(),
+        data: netconf_connection
+            .yang_paths
+            .filters
+            .gate_parameters
+            .clone(),
     };
 
     let get_config_response = netconf_connection.netconf_client.get_config(
@@ -145,24 +113,31 @@ pub fn get_config_interfaces(
 
 /// the provided configurations will be loaded into the given dtree. If the nodes dont already exist,
 /// they will be created. If they exist with different values, they will be overriden.
-pub fn put_configurations_in_dtree(dtree: &mut DataTree, port_configuration: &PortConfiguration) {
-    let port_xpath = format!(
-        "/ietf-interfaces:interfaces/interface[name='{}']/ieee802-dot1q-sched:gate-parameters",
-        port_configuration.name
-    );
+pub fn put_configurations_in_dtree(
+    dtree: &mut DataTree,
+    yang_paths: &YangPaths,
+    port_configuration: &PortConfiguration,
+) {
+    // path-example: /ietf-interfaces:interfaces/interface[name='eth0']/ieee802-dot1q-sched:gate-parameters
+    let mut port_xpath: String = String::from("/");
+    port_xpath.push_str(&yang_paths.params.interfaces_by_name);
+    port_xpath = port_xpath.replace("{}", &port_configuration.name);
+    port_xpath.push_str("/");
+    port_xpath.push_str(&yang_paths.params.gate_parameters);
+
     let config = &port_configuration.config;
 
     put_gate_parameters_in_dtree(
         dtree,
         port_xpath.clone(),
-        "/gate-enabled",
+        &yang_paths.params.gate_enabled,
         config.gate_enable.to_string().as_str(),
     );
 
     put_gate_parameters_in_dtree(
         dtree,
         port_xpath.clone(),
-        "/admin-gate-states",
+        &yang_paths.params.admin_gate_states,
         config.admin_gate_states.to_string().as_str(),
     );
 
@@ -175,32 +150,37 @@ pub fn put_configurations_in_dtree(dtree: &mut DataTree, port_configuration: &Po
             _ => panic!("not supported"),
         };
 
-        let path_prefix = format!("/admin-control-list[index={}]", i);
+        let path_prefix = yang_paths
+            .params
+            .admin_control_list_by_index
+            .replace("{}", &i.to_string());
 
         put_gate_parameters_in_dtree(
             dtree,
             port_xpath.clone(),
-            (path_prefix.clone() + "/operation-name").as_str(),
+            &(path_prefix.clone() + "/" + &yang_paths.params.operation_name),
             operation_name,
         );
         put_gate_parameters_in_dtree(
             dtree,
             port_xpath.clone(),
-            (path_prefix.clone() + "/sgs-params/gate-states-value").as_str(),
-            gce.gate_state_value.to_string().as_str(),
+            &(path_prefix.clone() + "/" + &yang_paths.params.sgs_params_gate_states_value),
+            &gce.gate_state_value.to_string(),
         );
         put_gate_parameters_in_dtree(
             dtree,
             port_xpath.clone(),
-            (path_prefix.clone() + "/sgs-params/time-interval-value").as_str(),
-            gce.time_interval_value.to_string().as_str(),
+            &(path_prefix.clone() + "/" + &yang_paths.params.sgs_params_time_interval_value),
+            &gce.time_interval_value.to_string(),
         );
     }
 
     if config.admin_control_list.len() == 0 {
         // this should empty the list but not sure... test
         // TODO does this work?
-        if let Err(e) = dtree.remove((port_xpath.clone() + "/admin-control-list").as_str()) {
+        if let Err(e) = dtree.remove(
+            (port_xpath.clone() + "/" + &yang_paths.params.admin_control_list_length).as_str(),
+        ) {
             eprintln!("[Southbound] couldnt remove admin-control-list: {:?}", e);
         }
     }
@@ -208,8 +188,8 @@ pub fn put_configurations_in_dtree(dtree: &mut DataTree, port_configuration: &Po
     put_gate_parameters_in_dtree(
         dtree,
         port_xpath.clone(),
-        "/admin-control-list-length",
-        config.admin_control_list.len().to_string().as_str(),
+        &yang_paths.params.admin_control_list_length,
+        &config.admin_control_list.len().to_string(),
     );
     // ---
 
@@ -218,14 +198,14 @@ pub fn put_configurations_in_dtree(dtree: &mut DataTree, port_configuration: &Po
     put_gate_parameters_in_dtree(
         dtree,
         port_xpath.clone(),
-        "/admin-cycle-time/numerator",
-        cycle_time.0.to_string().as_str(),
+        &yang_paths.params.admin_cycle_time_numerator,
+        &cycle_time.0.to_string(),
     );
     put_gate_parameters_in_dtree(
         dtree,
         port_xpath.clone(),
-        "/admin-cycle-time/denominator",
-        cycle_time.1.to_string().as_str(),
+        &yang_paths.params.admin_cycle_time_denominator,
+        &cycle_time.1.to_string(),
     );
     // ---
 
@@ -234,36 +214,36 @@ pub fn put_configurations_in_dtree(dtree: &mut DataTree, port_configuration: &Po
     put_gate_parameters_in_dtree(
         dtree,
         port_xpath.clone(),
-        "/admin-base-time/seconds",
-        basetime.0.to_string().as_str(),
+        &yang_paths.params.admin_base_time_seconds,
+        &basetime.0.to_string(),
     );
     put_gate_parameters_in_dtree(
         dtree,
         port_xpath.clone(),
-        "/admin-base-time/fractional-seconds",
-        basetime.1.to_string().as_str(),
+        &yang_paths.params.admin_base_time_fractional_seconds,
+        &basetime.1.to_string(),
     );
     // ---
 
     put_gate_parameters_in_dtree(
         dtree,
         port_xpath.clone(),
-        "/admin-cycle-time-extension",
-        config.admin_cycle_time_extension.to_string().as_str(),
+        &yang_paths.params.admin_cycle_time_extension,
+        &config.admin_cycle_time_extension.to_string(),
     );
 
     put_gate_parameters_in_dtree(
         dtree,
         port_xpath.clone(),
-        "/config-change",
-        config.config_change.to_string().as_str(),
+        &yang_paths.params.config_change,
+        &config.config_change.to_string(),
     );
 }
 
 /// puts the in path specified node at xpath into the dtree. The value to insert can be provided as well.
 /// If the path doesnt exist, it gets created. Also nodes before which dont exist will be created.
 fn put_gate_parameters_in_dtree(dtree: &mut DataTree, port_xpath: String, path: &str, value: &str) {
-    let config_path = port_xpath + path;
+    let config_path = port_xpath + "/" + path;
     let config_path = config_path.as_str();
 
     dtree
@@ -281,7 +261,7 @@ pub fn print_whole_datatree(dtree: &DataTree) {
             DataFormat::XML,
             DataPrinterFlags::WD_ALL | DataPrinterFlags::WITH_SIBLINGS,
         )
-        .expect("Failed to print dtree");
+        .expect("Failed to log dtree to stdout");
 }
 
 pub fn edit_config_in_candidate(
@@ -296,17 +276,13 @@ pub fn edit_config_in_candidate(
         .expect("couldnt parse datatree")
         .expect("no data");
 
-    let res = netconf_connection.netconf_client.edit_config(
+    netconf_connection.netconf_client.edit_config(
         netconf_client::models::requests::DatastoreType::Candidate,
         data,
         Some(netconf_client::models::requests::DefaultOperationType::Merge),
         Some(netconf_client::models::requests::TestOptionType::TestThenSet),
         Some(netconf_client::models::requests::ErrorOptionType::RollbackOnError),
     )?;
-
-    // TODO: check if the response is ok
-    // or if something can be extracted
-    dbg!(res);
 
     Ok(())
 }
@@ -316,14 +292,11 @@ pub fn get_lldp_remote_systems_data(
 ) -> Result<DataTree, NetconfClientError> {
     let get_lldp_filter = Filter {
         filter_type: FilterType::Subtree,
-        data: "
-        <lldp xmlns=\"urn:ieee:std:802.1AB:yang:ieee802-dot1ab-lldp\">
-            <port>
-                <name></name>
-                <remote-systems-data></remote-systems-data>
-            </port>
-        </lldp>"
-            .to_string(),
+        data: netconf_connection
+            .yang_paths
+            .filters
+            .remote_systems_data
+            .clone(),
     };
 
     let response = netconf_connection
@@ -347,13 +320,11 @@ pub fn get_interface_data(
 ) -> Result<DataTree, NetconfClientError> {
     let get_interfaces_filter = Filter {
         filter_type: FilterType::Subtree,
-        data: "<interfaces xmlns=\"urn:ietf:params:xml:ns:yang:ietf-interfaces\">
-                    <interface>
-                        <gate-parameters xmlns=\"urn:ieee:std:802.1Q:yang:ieee802-dot1q-sched\"></gate-parameters>
-                        <bridge-port xmlns=\"urn:ieee:std:802.1Q:yang:ieee802-dot1q-bridge\"></bridge-port>
-                    </interface>
-                </interfaces>"
-            .to_string(),
+        data: netconf_connection
+            .yang_paths
+            .filters
+            .gate_parameters_and_bridge_ports
+            .clone(),
     };
 
     let response = netconf_connection
@@ -375,6 +346,8 @@ pub fn get_interface_data(
 }
 
 /// helper function to extract the interface name from an xpath
+///
+/// this only works, if a single attribute is provided in the xpath and this one is named 'name'
 ///
 /// # Example
 ///
@@ -399,100 +372,194 @@ fn extract_interface_name_from_xpath(xpath: &str) -> String {
 ///
 /// "/ieee802-dot1ab-lldp:lldp/port/remote-systems-data" -> "remote-systems-data"
 fn extract_last_node_name_from_xpath(xpath: &String) -> &str {
-    xpath.split("/").last().unwrap().trim()
+    let parts = xpath.split("/");
+    let last_node = parts.last().expect("no last node found in xpath");
+    last_node
 }
 
-pub fn extract_remote_systems_data(dtree: &DataTree) -> Vec<RemoteSystemsData> {
+pub fn extract_remote_systems_data(
+    dtree: &DataTree,
+    yang_paths: &YangPaths,
+) -> Vec<RemoteSystemsData> {
     let mut remote_systems: Vec<RemoteSystemsData> = Vec::new();
+    let remote_systems_path: String = String::from("/") + (&yang_paths.params.remote_systems_data);
 
     for dnode in dtree
-        .find_xpath("/ieee802-dot1ab-lldp:lldp/port/remote-systems-data")
+        .find_xpath(&remote_systems_path)
         .expect("no remote-systems-data found")
     {
         let mut system = RemoteSystemsData::new();
 
-        for child_node in dnode.children() {
-            let path = child_node.path();
-            let node_name = extract_last_node_name_from_xpath(&path);
-
-            let value = child_node.value();
-
-            if let Some(value) = value {
+        if let Ok(child_node) = dnode.find_path(&yang_paths.params.chassis_id_subtype) {
+            if let Some(value) = child_node.value() {
                 match value {
-                    DataValue::Other(v) => match node_name {
-                        "chassis-id-subtype" => system.chassis_id_subtype = v,
-                        "chassis-id" => system.chassis_id = v,
-                        "port-id-subtype" => system.port_id_subtype = v,
-                        "port-id" => system.port_id = v,
-                        "port-desc" => system.port_desc = v,
-                        "system-name" => system.system_name = v,
-                        "system-description" => system.system_description = v,
-                        "system-capabilities-supported" => system.system_capabilities_supported = v,
-                        "system-capabilities-enabled" => system.system_capabilities_enabled = v,
-                        _ => eprintln!(
-                            "unknown node found in dtree... value: {:?} on {}",
-                            v, node_name
-                        ),
-                    },
-                    DataValue::Uint32(v) => match node_name {
-                        "time-mark" => system.time_mark = v,
-                        "remote-index" => system.remote_index = v,
-                        _ => eprintln!(
-                            "unknown node found in dtree... value: {:?} on {}",
-                            v, node_name
-                        ),
-                    },
-                    _ => eprintln!(
-                        "found an unexpected node in dtree {:?} {}",
-                        value, node_name
-                    ),
+                    DataValue::Other(v) => system.chassis_id_subtype = v,
+                    _ => eprintln!("found an unexpected node in dtree"),
                 }
-            } else {
-                // management-address has no value since the parameters are in the xpath
-                if node_name.starts_with("management-address") {
-                    let params = node_name.replace("management-address", "");
-                    let attribs = params
-                        .split("][")
-                        .map(|x| {
-                            let x = x.replace("[", "");
-                            let x = x.replace("]", "");
-                            return x.replace("'", "");
-                        })
-                        .collect::<Vec<String>>();
+            }
+        } else {
+            eprintln!("no chassis-id-subtype found in dtree")
+        };
 
-                    let mut address: ManagementAddress = ManagementAddress::new();
-                    for attrib in attribs {
-                        let parts = attrib.split("=").collect::<Vec<&str>>();
-                        let key = parts[0];
-                        let value = parts[1];
+        if let Ok(child_node) = dnode.find_path(&yang_paths.params.chassis_id) {
+            if let Some(value) = child_node.value() {
+                match value {
+                    DataValue::Other(v) => system.chassis_id = v,
+                    _ => eprintln!("found an unexpected node in dtree"),
+                }
+            }
+        } else {
+            eprintln!("no chassis-id found in dtree")
+        };
 
-                        match key {
-                            "address-subtype" => address.address_subtype = value.to_string(),
-                            "address" => address.address = value.to_string(),
-                            _ => eprintln!(
-                                "unknown node found in dtree... value: {:?} on {}",
-                                value, node_name
-                            ),
+        if let Ok(child_node) = dnode.find_path(&yang_paths.params.port_id_subtype) {
+            if let Some(value) = child_node.value() {
+                match value {
+                    DataValue::Other(v) => system.port_id_subtype = v,
+                    _ => eprintln!("found an unexpected node in dtree"),
+                }
+            }
+        } else {
+            eprintln!("no port-id-subtype found in dtree")
+        };
+
+        if let Ok(child_node) = dnode.find_path(&yang_paths.params.port_id) {
+            if let Some(value) = child_node.value() {
+                match value {
+                    DataValue::Other(v) => system.port_id = v,
+                    _ => eprintln!("found an unexpected node in dtree"),
+                }
+            }
+        } else {
+            eprintln!("no port-id found in dtree")
+        };
+
+        if let Ok(child_node) = dnode.find_path(&yang_paths.params.port_desc) {
+            if let Some(value) = child_node.value() {
+                match value {
+                    DataValue::Other(v) => system.port_desc = v,
+                    _ => eprintln!("found an unexpected node in dtree"),
+                }
+            }
+        } else {
+            eprintln!("no port-desc found in dtree")
+        };
+
+        if let Ok(child_node) = dnode.find_path(&yang_paths.params.system_name) {
+            if let Some(value) = child_node.value() {
+                match value {
+                    DataValue::Other(v) => system.system_name = v,
+                    _ => eprintln!("found an unexpected node in dtree"),
+                }
+            }
+        } else {
+            eprintln!("no system-name found in dtree")
+        };
+
+        if let Ok(child_node) = dnode.find_path(&yang_paths.params.system_description) {
+            if let Some(value) = child_node.value() {
+                match value {
+                    DataValue::Other(v) => system.system_description = v,
+                    _ => eprintln!("found an unexpected node in dtree"),
+                }
+            }
+        } else {
+            eprintln!("no system-description found in dtree")
+        };
+
+        if let Ok(child_node) = dnode.find_path(&yang_paths.params.system_capabilities_supported) {
+            if let Some(value) = child_node.value() {
+                match value {
+                    DataValue::Other(v) => system.system_capabilities_supported = v,
+                    _ => eprintln!("found an unexpected node in dtree"),
+                }
+            }
+        } else {
+            eprintln!("no system-capabilities-supported found in dtree")
+        };
+
+        if let Ok(child_node) = dnode.find_path(&yang_paths.params.system_capabilities_enabled) {
+            if let Some(value) = child_node.value() {
+                match value {
+                    DataValue::Other(v) => system.system_capabilities_enabled = v,
+                    _ => eprintln!("found an unexpected node in dtree"),
+                }
+            }
+        } else {
+            eprintln!("no system-capabilities-enabled found in dtree")
+        };
+
+        if let Ok(child_node) = dnode.find_path(&yang_paths.params.time_mark) {
+            if let Some(value) = child_node.value() {
+                match value {
+                    DataValue::Uint32(v) => system.time_mark = v,
+                    _ => eprintln!("found an unexpected node in dtree"),
+                }
+            }
+        } else {
+            eprintln!("no time-mark found in dtree");
+        };
+
+        if let Ok(child_node) = dnode.find_path(&yang_paths.params.remote_index) {
+            if let Some(value) = child_node.value() {
+                match value {
+                    DataValue::Uint32(v) => system.remote_index = v,
+                    _ => eprintln!("found an unexpected node in dtree"),
+                }
+            }
+        } else {
+            eprintln!("no remote-index found in dtree");
+        };
+
+        if let Ok(management_nodes) = dnode.find_xpath(&yang_paths.params.management_address) {
+            for child_node in management_nodes {
+                let child_node_path = child_node.path();
+                let child_node_name = extract_last_node_name_from_xpath(&child_node_path);
+                let params = child_node_name.replace(&yang_paths.params.management_address, "");
+                let attribs = params
+                    .split("][")
+                    .map(|x| {
+                        let x = x.replace("[", "");
+                        let x = x.replace("]", "");
+                        x.replace("'", "")
+                    })
+                    .collect::<Vec<String>>();
+
+                let mut address: ManagementAddress = ManagementAddress::new();
+                for attrib in attribs {
+                    let parts = attrib.split("=").collect::<Vec<&str>>();
+                    let key = parts[0];
+                    let value = parts[1];
+
+                    match key {
+                        _ if key == &yang_paths.params.attrib_name_address_subtype => {
+                            address.address_subtype = value.to_string()
                         }
+                        _ if key == &yang_paths.params.attrib_name_address => {
+                            address.address = value.to_string()
+                        }
+                        _ => eprintln!(
+                            "unknown node found in dtree... value: {:?} on {}",
+                            value, child_node_name
+                        ),
                     }
-                    system.management_address.push(address);
-                } else {
-                    println!("parsing not implemented for {}", node_name);
                 }
+                system.management_address.push(address);
             }
         }
 
         remote_systems.push(system);
     }
 
-    return remote_systems;
+    remote_systems
 }
 
-pub fn extract_port_delays(dtree: &DataTree) -> Vec<Port> {
+pub fn extract_port_delays(dtree: &DataTree, yang_paths: &YangPaths) -> Vec<Port> {
     let mut ports: Vec<Port> = Vec::new();
+    let interfaces_path: String = String::from("/") + &yang_paths.params.interfaces;
 
     for interface_dnode in dtree
-        .find_xpath("/ietf-interfaces:interfaces/interface")
+        .find_xpath(&interfaces_path)
         .expect("no iterfaces found")
     {
         let path = interface_dnode.path();
@@ -505,29 +572,27 @@ pub fn extract_port_delays(dtree: &DataTree) -> Vec<Port> {
             tick_granularity: 0,
         };
 
-        for address_dnode in interface_dnode
-            .find_xpath((path.clone() + "/bridge-port/address").as_str())
-            .expect("no address field found")
-        {
-            if let Some(value) = address_dnode.value() {
+        if let Ok(child_node) = interface_dnode.find_path(&yang_paths.params.bridge_port_address) {
+            if let Some(value) = child_node.value() {
                 match value {
                     DataValue::Other(v) => port.mac_address = v,
                     _ => eprintln!("found an unexpected node in dtree"),
                 }
             }
-        }
+        } else {
+            eprintln!("no bridge-port-address found in dtree");
+        };
 
-        for tick_dnode in interface_dnode
-            .find_xpath((path.clone() + "/gate-parameters/tick-granularity").as_str())
-            .expect("no tick-granularity field found")
-        {
-            if let Some(value) = tick_dnode.value() {
+        if let Ok(child_node) = interface_dnode.find_path(&yang_paths.params.tick_granularity) {
+            if let Some(value) = child_node.value() {
                 match value {
-                    DataValue::Uint32(tick) => port.tick_granularity = tick,
+                    DataValue::Uint32(v) => port.tick_granularity = v,
                     _ => eprintln!("found an unexpected node in dtree"),
                 }
             }
-        }
+        } else {
+            eprintln!("no tick-granularity found in dtree");
+        };
 
         for bridge_port_delays_dnode in interface_dnode
             .find_xpath((path + "/bridge-port/bridge-port-delays").as_str())
@@ -535,31 +600,121 @@ pub fn extract_port_delays(dtree: &DataTree) -> Vec<Port> {
         {
             let mut delays = BridgePortDelays::new();
 
-            for child_node in bridge_port_delays_dnode.children() {
-                let path = child_node.path();
-                let node_name = extract_last_node_name_from_xpath(&path);
-
-                let value: u32 = match child_node
-                    .value()
-                    .expect("no value in tree is not possible")
-                {
-                    DataValue::Uint64(v) => v as u32,
-                    DataValue::Uint32(v) => v as u32,
-                    _ => 0,
-                };
-
-                match node_name {
-                    "port-speed" => delays.port_speed = value,
-                    "dependentRxDelayMin" => delays.dependent_rx_delay_min = value,
-                    "dependentRxDelayMax" => delays.dependent_rx_delay_max = value,
-                    "independentRxDelayMin" => delays.independent_rx_delay_min = value,
-                    "independentRxDelayMax" => delays.independent_rx_delay_max = value,
-                    "independentRlyDelayMin" => delays.independent_rly_delay_min = value,
-                    "independentRlyDelayMax" => delays.independent_rly_delay_max = value,
-                    "independentTxDelayMin" => delays.independent_tx_delay_min = value,
-                    "independentTxDelayMax" => delays.independent_tx_delay_max = value,
-                    _ => eprintln!("unknown node found in dtree..."),
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.port_speed)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint32(v) => delays.port_speed = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
                 }
+            } else {
+                eprintln!("no port-speed found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.dependent_rx_delay_min)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.dependent_rx_delay_min = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no dependent-rx-delay-min found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.dependent_rx_delay_max)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.dependent_rx_delay_max = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no dependent-rx-delay-max found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.independent_rx_delay_min)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.independent_rx_delay_min = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no independent-rx-delay-min found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.independent_rx_delay_max)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.independent_rx_delay_max = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no independent-rx-delay-max found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.independent_rly_delay_min)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.independent_rly_delay_min = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no independent-rly-delay-min found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.independent_rly_delay_max)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.independent_rly_delay_max = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no independent-rly-delay-max found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.independent_tx_delay_min)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.independent_tx_delay_min = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no independent-tx-delay-min found in dtree");
+            }
+
+            if let Ok(child_node) =
+                bridge_port_delays_dnode.find_path(&yang_paths.params.independent_tx_delay_max)
+            {
+                if let Some(value) = child_node.value() {
+                    match value {
+                        DataValue::Uint64(v) => delays.independent_tx_delay_max = v,
+                        _ => eprintln!("found an unexpected node in dtree"),
+                    }
+                }
+            } else {
+                eprintln!("no independent-tx-delay-max found in dtree");
             }
 
             port.delays.push(delays);
@@ -568,5 +723,5 @@ pub fn extract_port_delays(dtree: &DataTree) -> Vec<Port> {
         ports.push(port);
     }
 
-    return ports;
+    ports
 }

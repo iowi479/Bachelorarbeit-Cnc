@@ -1124,28 +1124,28 @@ pub struct BridgePortDelays {
     pub port_speed: u32,
 
     /// Dependent RX delay minimum.
-    pub dependent_rx_delay_min: u32,
+    pub dependent_rx_delay_min: u64,
 
     /// Dependent RX delay maximum.
-    pub dependent_rx_delay_max: u32,
+    pub dependent_rx_delay_max: u64,
 
     /// Independent RX delay minimum.
-    pub independent_rx_delay_min: u32,
+    pub independent_rx_delay_min: u64,
 
     /// Independent RX delay maximum.
-    pub independent_rx_delay_max: u32,
+    pub independent_rx_delay_max: u64,
 
     /// Independent relay delay minimum.
-    pub independent_rly_delay_min: u32,
+    pub independent_rly_delay_min: u64,
 
     /// Independent relay delay maximum.
-    pub independent_rly_delay_max: u32,
+    pub independent_rly_delay_max: u64,
 
     /// Independent TX delay minimum.
-    pub independent_tx_delay_min: u32,
+    pub independent_tx_delay_min: u64,
 
     /// Independent TX delay maximum.
-    pub independent_tx_delay_max: u32,
+    pub independent_tx_delay_max: u64,
 }
 
 impl BridgePortDelays {
