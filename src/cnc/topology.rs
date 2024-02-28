@@ -14,7 +14,7 @@ pub trait TopologyControllerInterface {
 }
 
 pub trait TopologyAdapterInterface {
-    /// returnes to currently available Topology
+    /// returnes to currently available Topology-Information
     fn get_topology(&self) -> Topology;
 
     /// returns information about a specific node

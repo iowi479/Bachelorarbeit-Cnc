@@ -168,7 +168,6 @@ pub struct FailedStream {
     pub stream_id: StreamIdTypeUpper,
     pub cuc_id: String,
     pub domain_id: String,
-    // TODO acutally here?
     pub failure_code: u32,
 }
 

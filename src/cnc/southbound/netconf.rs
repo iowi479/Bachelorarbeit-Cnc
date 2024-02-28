@@ -264,6 +264,8 @@ pub fn print_whole_datatree(dtree: &DataTree) {
         .expect("Failed to log dtree to stdout");
 }
 
+/// This will send the <edit-config> rpc to the netconf-server.
+/// The provided dtree will be sent to the candidate datastore and merged with the existing configuration.
 pub fn edit_config_in_candidate(
     netconf_connection: &mut NetconfConnection,
     dtree: &DataTree,
@@ -287,6 +289,7 @@ pub fn edit_config_in_candidate(
     Ok(())
 }
 
+/// This will <get> the running configuration from the netconf-server filtered for lldp-data.
 pub fn get_lldp_remote_systems_data(
     netconf_connection: &mut NetconfConnection,
 ) -> Result<DataTree, NetconfClientError> {
@@ -315,6 +318,7 @@ pub fn get_lldp_remote_systems_data(
     Ok(dtree)
 }
 
+/// This will <get> the running configuration from the netconf-server filtered for interfaces-data.
 pub fn get_interface_data(
     netconf_connection: &mut NetconfConnection,
 ) -> Result<DataTree, NetconfClientError> {
@@ -377,6 +381,7 @@ fn extract_last_node_name_from_xpath(xpath: &String) -> &str {
     last_node
 }
 
+/// This will try to extract the remote-systems-data from the provided dtree.
 pub fn extract_remote_systems_data(
     dtree: &DataTree,
     yang_paths: &YangPaths,
@@ -554,6 +559,7 @@ pub fn extract_remote_systems_data(
     remote_systems
 }
 
+/// This will try to extract the port-configuration from the provided dtree.
 pub fn extract_port_delays(dtree: &DataTree, yang_paths: &YangPaths) -> Vec<Port> {
     let mut ports: Vec<Port> = Vec::new();
     let interfaces_path: String = String::from("/") + &yang_paths.params.interfaces;

@@ -20,6 +20,7 @@ mod tests {
 
     #[test]
     #[serial]
+    /// This test empties the Storage, inserts three streams and checks if they are inserted correctly afterwards.
     fn insert_streams() {
         // Configuration for CNC
         let id: u32 = 0;
@@ -77,6 +78,7 @@ mod tests {
 
     #[test]
     #[serial]
+    /// This test inserts three streams, removes one and checks if the removed stream is removed correctly.
     fn remove_stream() {
         // Configuration for CNC
         let id: u32 = 0;
@@ -122,6 +124,8 @@ mod tests {
 
     #[test]
     #[serial]
+    /// This test inserts three streams, computes them and checks if the computed values are set correctly.
+    /// Also the send messages to the CUC wil get displayed and can be inspected manually.
     fn compute_all() {
         // Configuration for CNC
         let id: u32 = 0;
@@ -183,7 +187,7 @@ mod tests {
             }
         }
 
-        println!("Check manualle if the configuration is set correctly on the switch.");
+        println!("Check manually if the configuration is set correctly on the switch.");
         println!(
             "This can be done by manually connecting via netconf and check the configuration."
         );
@@ -194,6 +198,7 @@ mod tests {
 
     #[test]
     #[serial]
+    /// This test inserts three streams, and tests the functionallity of the get_streams_in_domain function.
     fn get_all_streams() {
         // create precondition
         insert_streams();
@@ -217,6 +222,8 @@ mod tests {
     }
 
     #[test]
+    /// This test checks if the topology is correctly retrieved.
+    /// You have to manually check if the fetched data is correct.
     fn lldp_neighbours() {
         let config = SSHConfigurationParams {
             username: String::from("admin"),
@@ -238,6 +245,8 @@ mod tests {
     }
 
     #[test]
+    /// This test checks if the port capabilities are correctly retrieved.
+    /// You have to manually check if the fetched data is correct.
     fn port_capabilities() {
         let config = SSHConfigurationParams {
             username: String::from("admin"),

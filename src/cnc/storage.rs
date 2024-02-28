@@ -15,26 +15,38 @@ pub trait StorageAdapterInterface {
     /// This should fully setup everything the Storage-Component needs. After this is called, it has to be ready to operate.
     fn configure_storage(&self);
 
+    /// This will return all streams of the provided domains. If a domain is not present, it will be ignored.
     fn get_streams_in_domains(
         &self,
         domains: Vec<compute_streams::Domain>,
     ) -> Vec<uni_types::Domain>;
+
+    /// This will return all streams of the provided domain.
     fn get_streams_in_domain(&self, domain: compute_streams::Domain) -> Vec<uni_types::Domain>;
+
+    /// This will return all streams (with StreamStatus = Planned | Modified) of the provided domains.
     fn get_planned_and_modified_streams_in_domains(
         &self,
         domains: Vec<compute_streams::Domain>,
     ) -> Vec<uni_types::Domain>;
 
-    //not used
+    /// This will remove all streams from the provided cuc_id.
     fn remove_all_streams(&self, cuc_id: &String);
+
+    /// This will remove the stream with the provided stream_id from the provided cuc_id.
     fn remove_stream(&self, cuc_id: &String, stream_id: String);
 
+    /// This will insert or replace the provided stream in the provided cuc_id.
     fn set_stream(&self, cuc_id: &String, stream: &Stream);
+
+    /// This will insert or replace the provided streams in the provided cuc_id.
+    /// This uses multiple calls of self.set_stream(...)
     fn set_streams(&self, cuc_id: &String, streams: &Vec<Stream>);
 
+    /// This will replace the provided streams. If the stream is not present, it will be ignored.
     fn modify_streams(&self, domains: &Vec<uni_types::Domain>);
 
-    /// This gets called after the configuration of the requested Streams was successfull.
+    /// This sets StreamStatus to Configured on all provided streams. Although if the stream_id is also in the failed_streams it gets set to planned instead.
     fn set_streams_configured(
         &self,
         domains: &Vec<uni_types::Domain>,
@@ -45,13 +57,16 @@ pub trait StorageAdapterInterface {
     /// If the domain or cuc_id could not be found: returns None
     fn get_domain_id_of_cuc(&self, cuc_id: String) -> Option<String>;
 
-    // not used
+    /// This will return all configs in the storage.
     fn get_all_configs(&self) -> Vec<Config>;
-    //not used
+
+    /// This will return the requested config. If it is not present, this will return None
     fn get_config(&self, node_id: u32) -> Option<Config>;
 
-    // not used
+    /// This will insert or replace the provided config in the storage.
     fn set_config(&self, config: Config);
+
+    /// This will insert or replace the provided configs in the storage.
     fn set_configs(&self, configs: &Vec<Config>);
 
     /// In the fully centralized model, this should not be used.
@@ -215,7 +230,6 @@ impl StorageAdapterInterface for FileStorage {
         }
     }
 
-    /// remove a single stream by id from a given cuc in the local cnc.domain
     fn remove_stream(&self, cuc_id: &String, stream_id: String) {
         let mut domain_lock = self.domains.write().unwrap();
 
@@ -243,7 +257,6 @@ impl StorageAdapterInterface for FileStorage {
         }
     }
 
-    /// get streams of a single cuc in the domain
     fn get_streams_in_domain(&self, get_domain: compute_streams::Domain) -> Vec<uni_types::Domain> {
         let domain_lock = self.domains.write().unwrap();
         let mut result: Vec<uni_types::Domain> = Vec::new();
@@ -388,7 +401,6 @@ impl StorageAdapterInterface for FileStorage {
         self.save_configs();
     }
 
-    /// goes through all domains and retures all with all subsecuent cucs and all their streams
     fn get_streams_in_domains(
         &self,
         domains: Vec<compute_streams::Domain>,
@@ -468,7 +480,6 @@ impl StorageAdapterInterface for FileStorage {
         result
     }
 
-    /// sets StreamStatus to Configured on all provided streams. Although if the stream_id is also in the failed_streams it gets set to planned instead.
     fn set_streams_configured(
         &self,
         domains: &Vec<uni_types::Domain>,

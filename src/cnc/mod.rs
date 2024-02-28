@@ -24,9 +24,12 @@ pub type SouthboundRef = Arc<dyn SouthboundAdapterInterface + Send + Sync>;
 pub type StorageRef = Arc<dyn StorageAdapterInterface + Send + Sync>;
 pub type TopologyRef = Arc<dyn TopologyAdapterInterface + Send + Sync>;
 pub type SchedulerRef = Arc<dyn SchedulerAdapterInterface + Send + Sync>;
+// ----
 
+/// Message to display if CNC is not present
 pub const CNC_NOT_PRESENT: &'static str = "CNC is not present exiting...";
 
+/// This is the main CNC struct. It holds all Components and is responsible for the main operation of the CNC.
 pub struct Cnc {
     pub id: u32,
     pub domain: String,
@@ -124,6 +127,8 @@ impl Cnc {
         drop(cnc);
     }
 
+    /// This function sets the operating status of the CNC.
+    /// This can be used to stop the CNC from running by setting operating to false.
     fn set_operating(&self, value: bool) {
         let o = self.operating.clone();
         let mut o_lock = o.write().unwrap();
@@ -131,6 +136,10 @@ impl Cnc {
         drop(o_lock);
     }
 
+    /// This function is used to execute a computation.
+    /// Which streams are computed is determined by the computation_type.
+    ///
+    /// After the computation is finished the CNC will configure the network and send notifications to the Northbound.
     fn execute_computation(cnc: Arc<Cnc>, computation_type: ComputationType) {
         println!("[Scheduler] preparing computation...");
 
@@ -182,6 +191,7 @@ impl Cnc {
         cnc.northbound.configure_streams_completed(notification);
     }
 
+    /// This function returns the domains to compute based on the computation_type.
     fn get_domains_to_compute(&self, computation: ComputationType) -> Vec<uni_types::Domain> {
         let domains: Vec<uni_types::Domain> = match computation {
             ComputationType::All(request_domains) => {

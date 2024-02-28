@@ -128,6 +128,7 @@ pub struct SwitchParameters {
     pub independent_tx_delay_max: String,
 }
 
+// TODO: if other configurations are needed, you can add them here.
 impl SwitchParameters {
     fn load_br_paths() -> Self {
         Self {
@@ -197,7 +198,7 @@ pub struct SearchFilters {
     pub remote_systems_data: String,
 }
 
-
+// TODO: if other filters are needed, you can add them here.
 impl SearchFilters {
     fn load_br_filters() -> Self {
         Self {
@@ -232,8 +233,9 @@ impl SearchFilters {
 }
 
 
-/// all yang-models to load have to be included here.
-/// TODO: move this to another file to bundle up all b&r specific stuff
+/// all yang-models to load for the B&R Switch have to be included here.
+/// TODO: if this should be dynamic, you can add a function to load the modules from a file or
+/// something else
 pub const YANG_MODULES: &'static [YangModule] = &[
     YangModule::new_with_features("ietf-interfaces", "2018-02-20", &["if-mib"]),
     YangModule::new("ietf-yang-types", "2013-07-15"),

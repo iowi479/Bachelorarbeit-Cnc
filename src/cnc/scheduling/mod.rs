@@ -12,6 +12,8 @@ use super::Cnc;
 use std::sync::Weak;
 
 pub trait SchedulerAdapterInterface {
+    /// This function will compute the schedule for the given topology and domains.
+    /// This can take some time, depending on what algorithms are used.
     fn compute_schedule(&self, topology: &Topology, domains: &Vec<Domain>) -> ComputationResult;
 
     /// # CNC Configuration
