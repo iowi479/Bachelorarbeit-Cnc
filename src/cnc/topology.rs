@@ -60,6 +60,7 @@ impl MockTopology {
 
         /*
         For this Topology node (2) doesnt exist and thus will fail to be configured.
+        (Switches) [EndStations]
 
         ------- Mock Topology -----
                   (1) --- (2)
