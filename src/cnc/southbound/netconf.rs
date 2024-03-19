@@ -176,8 +176,6 @@ pub fn put_configurations_in_dtree(
     }
 
     if config.admin_control_list.len() == 0 {
-        // this should empty the list but not sure... test
-        // TODO does this work?
         if let Err(e) = dtree.remove(
             (port_xpath.clone() + "/" + &yang_paths.params.admin_control_list_length).as_str(),
         ) {

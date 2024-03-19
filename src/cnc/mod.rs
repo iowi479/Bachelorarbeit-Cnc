@@ -349,10 +349,7 @@ impl NorthboundControllerInterface for Cnc {
         };
     }
 
-    // TODO cleanup
     fn set_streams(&self, cuc_id: &String, request: Vec<StreamRequest>) {
-        // TODO parse request and add to storage
-        // TODO status groups and normal groups. When does everthig get created
         let mut streams: Vec<Stream> = Vec::new();
 
         for requested_stream in request {
@@ -368,7 +365,6 @@ impl NorthboundControllerInterface for Cnc {
                         },
                     },
                 },
-                // TODO this requires only one listener
                 listener: vec![types::uni_types::Listener {
                     index: 0,
                     group_listener: requested_stream.listeners[0].clone(),
@@ -402,7 +398,6 @@ impl NorthboundControllerInterface for Cnc {
             }],
         };
 
-        // TODO check if this actually works
         let domains = self.storage.get_streams_in_domain(search_domain);
         assert_eq!(domains.len(), 1);
         return domains[0].clone();

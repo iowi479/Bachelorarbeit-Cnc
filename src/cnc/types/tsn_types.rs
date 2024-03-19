@@ -938,7 +938,6 @@ pub struct GroupTalker {
 /// originates from the CUC, and is delivered to the CNC.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GroupListener {
-    // TODO index needed... not in yang model
     pub index: u32,
 
     /// List of identifiers, one for each physical interface (distinct

@@ -51,7 +51,6 @@ pub mod tsn_types;
 /// configure TSN Streams in a TSN network.
 pub mod uni_types;
 
-/// TODO: description for lldp types
 pub mod lldp_types;
 
 pub mod topology {

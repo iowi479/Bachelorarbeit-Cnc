@@ -65,7 +65,6 @@ impl MockTSNScheduler {
                     };
 
                     // copy interfaceconfigs
-                    // TODO do mac configs need to be port->bridge or port->port of talker/listener
                     for config in stream.talker.group_talker.data_frame_specification.iter() {
                         match &config.field {
                             DataFrameSpecificationElementType::Ieee802MacAddresses(x) => {

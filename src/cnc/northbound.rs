@@ -751,7 +751,6 @@ impl NorthboundAdapterInterface for MockGetStreamAdapter {
             let res = cnc.get_streams(&cuc_id);
 
             // this tests for the correct streams for the executed test
-            // TODO do more tests here
             assert_eq!(res.cuc[0].stream.len(), 3);
             println!("[Northbound] response to get_streams {res:?}", res = res);
             cnc.set_operating(false);
