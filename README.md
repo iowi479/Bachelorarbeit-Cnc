@@ -1,12 +1,15 @@
 # Bachelorarbeit-CNC
 
 ## Dependencies
-
-TODO are there dependencies missing?
+These are determined from a clean ubuntu 22.03 installation.
 
 - [rust](https://www.rust-lang.org/tools/install)
 - [libyang2](https://github.com/CESNET/libyang)
 - [libnetconf2](https://github.com/CESNET/libnetconf2)
+- required packages on top of the dependencies of the above:
+```console
+apt-get install pkg-config
+```
 
 ## Testing
 
