@@ -149,18 +149,19 @@ impl Cnc {
         println!("[Scheduler] computing schedule now...");
 
         let computation_result = cnc.scheduler.compute_schedule(&topology, &domains);
-        cnc.storage
-            .set_configs(&computation_result.schedule.configs);
 
         if computation_result.failed_streams.len() > 0 {
             println!(
                 "[Scheduler] computation finished - with {} streams failed",
                 computation_result.failed_streams.len()
             );
+            return;
         } else {
             println!("[Scheduler] computation finished ");
         }
 
+        cnc.storage
+            .set_configs(&computation_result.schedule.configs);
         // sets interface configurations of talker/listeners to storage
         cnc.storage.modify_streams(&computation_result.domains);
         let computed_notification: NotificationContent =
@@ -179,6 +180,7 @@ impl Cnc {
                 "[Scheduler] configuration finished - with {} failed interfaces",
                 failed_interfaces.interfaces.len()
             );
+            return;
         } else {
             println!("[Scheduler] configuration finished ");
         }
