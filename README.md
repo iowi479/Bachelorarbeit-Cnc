@@ -26,6 +26,8 @@ cargo test -- --test-threads=1 --show-output --nocapture
 
 ## Usage
 
+### Building
+
 In the release-build, the main-entrypoint in ./src/main.rs is used.
 Therefore the specified modules in that main function will be loaded and used.
 
@@ -36,6 +38,31 @@ cargo build --release
 ```console
 ./target/release/ba
 ```
+
+### Changing Topology
+
+In the Topology-Component there are function to load to different Topologies.
+These topologies are set by adding the nodes and the corresponding paths between them.
+The datastructures include the general information about the node (ID, IP-Adress, Ports, ...) and the configuration interface for the netconf connection.
+
+For a different Topology, on of those examples can be used as a startingpoing and be modified.
+Generally needed to be added is:
+- the Node itself including all the information specified in the Node-Datastructure
+- Ports and their information
+- Paths between nodes
+
+
+### Changing Northbound-Functionality
+
+Currently the Nortbound-Interface executes the run() function.
+In this function you can specify all the actions to take.
+Since there is no protcoll implemented yet, these actions have to be specified in code.
+Sample Actions are provided in the different implementations of the Nortbound-Interface-Component.
+
+To test actions you can build components that manage streams with adding, modifing or deleting to generate the configuration needed.
+After a Timeout another action like computing the shedules can be executed.
+That way a simulated cuc and their action can be implemented.
+
 
 ## Extensibility
 
