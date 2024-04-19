@@ -51,6 +51,9 @@ Generally needed to be added is:
 - Ports and their information
 - Paths between nodes
 
+To simply change the needed Netconf-parameters, the config_params datastructure for the node has to be modified.
+This datastructure includes the ip, port and ssh-params for the netconf-over-ssh communication.
+
 
 ### Changing Northbound-Functionality
 
