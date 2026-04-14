@@ -167,9 +167,9 @@ impl FileStorage {
     }
 
     fn random_stream_id() -> String {
-        let mut rng: rand::prelude::ThreadRng = rand::thread_rng();
-        let a: u8 = rng.gen_range(0..255);
-        let b: u8 = rng.gen_range(0..255);
+        let mut rng = rand::rng();
+        let a: u8 = rng.random_range(0..255);
+        let b: u8 = rng.random_range(0..255);
 
         format!("00-00-00-00-00-00:{:02X}-{:02X}", a, b)
     }
